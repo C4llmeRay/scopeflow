@@ -1,0 +1,7 @@
+{
+  "//": "The Edge Functions are Deno, not React Native. They are excluded from the app's tsconfig and checked with `deno check` instead.",
+  "compilerOptions": {
+    "lib": ["deno.window", "esnext"],
+    "strict": true
+  }
+}

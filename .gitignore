@@ -41,3 +41,9 @@ example
 # generated native folders
 /ios
 /android
+
+# local secrets
+.env
+
+# generated document previews
+.preview/

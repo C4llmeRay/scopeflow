@@ -1,98 +1,187 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+/**
+ * The job list — the app's front door.
+ *
+ * A contractor opens this between jobs, in a truck, one-handed. So: biggest
+ * touch target is the new-job button in the thumb zone, each row is a full-width
+ * tap, and the sync chip says what is still on the phone without ever calling it
+ * an error.
+ */
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Link, router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+import { Button, Card, Screen, SyncChip, TypeText } from '@/components/ui';
+import { openLocalDatabase } from '@/db/client';
+import {
+  JOB_STATUS_LABELS,
+  jobSubtitle,
+  jobSummaries,
+  jobTitle,
+  listJobs,
+  saveJob,
+  type JobRecord,
+  type JobSummary,
+} from '@/db/jobs';
+import type { CompanyRecord } from '@/db/companies';
+import { currentCompanyId, ensureCompany } from '@/features/jobs/useCompany';
+import { isProfileComplete } from '@/features/settings/company-form';
+import { useSync } from '@/hooks/use-sync';
+import { newId } from '@/lib/id';
+import { radius, space } from '@/theme/tokens';
+import { useTheme } from '@/theme/use-theme';
+
+export default function JobListScreen() {
+  const [jobs, setJobs] = useState<JobRecord[]>([]);
+  const [summaries, setSummaries] = useState<Map<string, JobSummary>>(new Map());
+  const [company, setCompany] = useState<CompanyRecord | null>(null);
+  const sync = useSync();
+  const c = useTheme();
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void (async () => {
+        const db = await openLocalDatabase();
+        const [rows, counts, profile] = await Promise.all([
+          listJobs(db, currentCompanyId()),
+          jobSummaries(db, currentCompanyId()),
+          ensureCompany(db),
+        ]);
+        if (active) {
+          setJobs(rows);
+          setSummaries(counts);
+          setCompany(profile);
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, []),
   );
-}
 
-export default function HomeScreen() {
+  const startJob = useCallback(async () => {
+    const db = await openLocalDatabase();
+    const id = newId();
+    await saveJob(db, { id, companyId: currentCompanyId(), peril: 'water' });
+    router.push(`/job/${id}`);
+  }, []);
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <Screen
+      footer={
+        <>
+          <Button label="New job" onPress={() => void startJob()} />
+          <View style={styles.footerRow}>
+            <View style={styles.footerItem}>
+              <Button
+                label="Price list"
+                variant="secondary"
+                onPress={() => router.push('/prices')}
+              />
+            </View>
+            <View style={styles.footerItem}>
+              <Button
+                label="Settings"
+                variant="secondary"
+                onPress={() => router.push('/settings')}
+              />
+            </View>
+          </View>
+        </>
+      }
+    >
+      <SyncChip
+        pending={sync.pending}
+        uploading={sync.uploading}
+        thinking={sync.thinking}
+        failed={sync.failed}
+        online={sync.online}
+      />
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
+      {!isProfileComplete(company) ? (
+        <Card>
+          <TypeText role="heading">Finish your business details</TypeText>
+          <TypeText role="body" tone="textMuted">
+            Your name and a way to reach you go on every estimate. An estimate
+            cannot be sent without them.
+          </TypeText>
+          <Button
+            label="Open settings"
+            variant="secondary"
+            onPress={() => router.push('/settings')}
           />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+        </Card>
+      ) : null}
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+      {jobs.length === 0 ? (
+        <Card>
+          <TypeText role="heading">No jobs yet</TypeText>
+          <TypeText role="body" tone="textMuted">
+            Start one when you pull up to the property. Everything works without
+            signal — it syncs when you get back to the truck.
+          </TypeText>
+        </Card>
+      ) : (
+        <View style={styles.list}>
+          {jobs.map((job) => {
+            const summary = summaries.get(job.id);
+            return (
+              <Link key={job.id} href={`/job/${job.id}`} asChild>
+                <Pressable
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.row,
+                    {
+                      backgroundColor: c.surface,
+                      borderColor: c.border,
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}
+                >
+                  <View style={styles.rowMain}>
+                    <TypeText role="heading">{jobTitle(job)}</TypeText>
+                    {jobSubtitle(job) ? (
+                      <TypeText role="caption" tone="textFaint">
+                        {jobSubtitle(job)}
+                      </TypeText>
+                    ) : null}
+                    <TypeText role="caption" tone="textMuted">
+                      {summary?.rooms ?? 0} rooms &middot; {summary?.photos ?? 0} photos
+                    </TypeText>
+                  </View>
+                  <View style={[styles.status, { backgroundColor: c.accentSoft }]}>
+                    <TypeText role="caption" tone="accent">
+                      {JOB_STATUS_LABELS[job.status]}
+                    </TypeText>
+                  </View>
+                </Pressable>
+              </Link>
+            );
+          })}
+        </View>
+      )}
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
+  list: { gap: space.md },
+  footerRow: { flexDirection: 'row', gap: space.md },
+  footerItem: { flex: 1 },
+  row: {
     flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    gap: space.md,
+    minHeight: 72,
+    padding: space.lg,
+    borderWidth: 1,
+    borderRadius: radius.md,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  rowMain: { flex: 1, gap: 2 },
+  status: {
+    paddingHorizontal: space.md,
+    paddingVertical: space.xs,
+    borderRadius: radius.pill,
   },
 });

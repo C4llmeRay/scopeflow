@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "scopeflow",
+    "name": "ScopeFlow",
     "slug": "scopeflow",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,7 +8,17 @@
     "scheme": "scopeflow",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.scopeflow.app",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "ScopeFlow uses the camera to photograph damage as evidence for the claim.",
+        "NSMicrophoneUsageDescription": "ScopeFlow records voice notes so you can describe damage while you walk.",
+        "NSSpeechRecognitionUsageDescription": "ScopeFlow turns your voice notes into text on this device, so you do not have to type them.",
+        "NSLocationWhenInUseUsageDescription": "ScopeFlow records where a photograph was taken, which is part of what makes it evidence.",
+        "NSPhotoLibraryAddUsageDescription": "ScopeFlow saves estimates and photo reports so you can send them.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,11 +27,17 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "predictiveBackGestureEnabled": false,
+      "package": "com.scopeflow.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -32,11 +48,18 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "expo-sqlite",
+      "expo-sharing",
+      "expo-speech-recognition",
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {}
     }
   }
 }
