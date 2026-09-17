@@ -417,3 +417,100 @@ begin
   raise notice 'PASS  the webhook can set billing state';
 end
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Phase 6: the webhook's own table, and the columns it owns.
+-- ---------------------------------------------------------------------------
+
+-- A client must not be able to see, invent or replay billing events. The table
+-- has RLS on and no policy at all, which denies everything for an ordinary
+-- user; the service role bypasses it. That asymmetry is the whole design, so it
+-- is worth asserting rather than assuming.
+begin;
+  set local role authenticated;
+  set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+
+  do $$
+  declare v_count integer;
+  begin
+    -- Two ways to be safe here and both are acceptable: the grant is revoked
+    -- (permission denied) or RLS has no policy to admit anything (zero rows).
+    -- What is NOT acceptable is a row coming back.
+    select count(*) into v_count from public.stripe_events;
+    if v_count <> 0 then
+      raise exception 'BILLING HOLE: a client can read % billing events', v_count;
+    end if;
+    raise notice 'PASS  billing events are invisible to a client (empty)';
+  exception
+    when insufficient_privilege then
+      raise notice 'PASS  billing events are invisible to a client (no grant)';
+  end
+  $$;
+
+  do $$
+  begin
+    begin
+      insert into public.stripe_events (id, type, event_created_at, outcome)
+      values ('evt_forged', 'customer.subscription.updated', now(), 'applied');
+      raise exception 'BILLING HOLE: a client forged a billing event';
+    exception
+      when insufficient_privilege or raise_exception then
+        if sqlerrm like '%BILLING HOLE%' then raise; end if;
+        raise notice 'PASS  a client cannot forge a billing event';
+    end;
+  end
+  $$;
+
+  -- cancel_at_period_end is Stripe's, like every other billing column. It was
+  -- added after the original trigger was written, which is exactly the kind of
+  -- column that gets left out of the guard.
+  do $$
+  begin
+    begin
+      update public.companies
+         set cancel_at_period_end = true
+       where id = '22222222-2222-2222-2222-222222222222';
+      raise exception 'BILLING HOLE: a client set its own cancel_at_period_end';
+    exception
+      when raise_exception then
+        if sqlerrm like '%BILLING HOLE%' then raise; end if;
+        raise notice 'PASS  a client cannot set cancel_at_period_end';
+    end;
+  end
+  $$;
+commit;
+
+-- The webhook, as the service role, writes all of it.
+insert into public.stripe_events (id, type, company_id, event_created_at, outcome)
+values ('evt_real', 'customer.subscription.updated',
+        '22222222-2222-2222-2222-222222222222', now(), 'applied');
+
+do $$
+begin
+  begin
+    insert into public.stripe_events (id, type, event_created_at, outcome)
+    values ('evt_real', 'customer.subscription.updated', now(), 'applied');
+    raise exception 'REPLAY HOLE: the same event was accepted twice';
+  exception
+    when unique_violation then
+      raise notice 'PASS  a replayed event id is refused';
+  end;
+end
+$$;
+
+update public.companies
+   set cancel_at_period_end = true,
+       last_billing_event_at = now()
+ where id = '22222222-2222-2222-2222-222222222222';
+
+do $$
+declare v_cancel boolean;
+begin
+  select cancel_at_period_end into v_cancel from public.companies
+   where id = '22222222-2222-2222-2222-222222222222';
+  if not v_cancel then
+    raise exception 'the webhook could not set cancel_at_period_end';
+  end if;
+  raise notice 'PASS  the webhook can set cancel_at_period_end';
+end
+$$;

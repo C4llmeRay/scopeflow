@@ -27,6 +27,15 @@ export interface BillingState {
   trialEndsAt: number | null;
   /** Epoch ms. What the last successful payment bought. */
   currentPeriodEnd: number | null;
+  /**
+   * Set once Stripe knows this period is the last one.
+   *
+   * Stripe does not flip a cancelled subscription to `canceled` at the moment
+   * somebody clicks cancel — it stays `active` and carries this flag until the
+   * period actually runs out. Reading only the status would tell a contractor
+   * who cancelled this morning that nothing had changed.
+   */
+  cancelAtPeriodEnd?: boolean;
 }
 
 export const TRIAL_DAYS = 14;
@@ -74,10 +83,29 @@ export function entitlement(state: BillingState, now: number = Date.now()): Enti
     case 'active': {
       // A paid subscription whose period has run out without renewing is a
       // webhook that has not arrived yet, not a contractor to lock out.
+      const left = state.currentPeriodEnd ? daysBetween(now, state.currentPeriodEnd) : null;
+
+      if (state.cancelAtPeriodEnd) {
+        // Still paid up, still sending — but it stops on a known date, and
+        // saying so is the difference between a renewal and a surprise.
+        return {
+          ...base,
+          canSendEstimates: true,
+          daysLeft: left,
+          shouldPrompt: true,
+          urgent: left !== null && left <= 3,
+          message:
+            left === null
+              ? 'Your subscription is set to end.'
+              : `Your subscription ends in ${left} ${left === 1 ? 'day' : 'days'}. ` +
+                'Resubscribe any time before then and nothing changes.',
+        };
+      }
+
       return {
         ...base,
         canSendEstimates: true,
-        daysLeft: state.currentPeriodEnd ? daysBetween(now, state.currentPeriodEnd) : null,
+        daysLeft: left,
         shouldPrompt: false,
         urgent: false,
         message: 'Subscribed.',

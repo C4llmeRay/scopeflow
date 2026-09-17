@@ -422,3 +422,39 @@ export async function markEstimateSent(
   if (!sent) throw new Error(`estimate ${id} vanished after being sent`);
   return sent;
 }
+
+/**
+ * When each job started, and when it first reached a frozen estimate.
+ *
+ * Feeds the time-to-estimate metric. A left join rather than an inner one on
+ * purpose: a job with no estimate has to come back as null so the metric can
+ * count it as unfinished, instead of silently disappearing and making the
+ * average look better than the work actually was.
+ */
+export async function jobTimings(
+  db: LocalDatabase,
+  companyId: string,
+): Promise<{ jobId: string; startedAt: number; firstEstimateAt: number | null }[]> {
+  const rows = await db.adapter.all<{
+    job_id: string;
+    started_at: number;
+    first_estimate_at: number | null;
+  }>(
+    `select j.id         as job_id,
+            j.created_at as started_at,
+            (select min(e.created_at)
+               from estimates e
+              where e.job_id = j.id
+                and e.deleted_at is null) as first_estimate_at
+       from jobs j
+      where j.company_id = ?
+        and j.deleted_at is null`,
+    [companyId],
+  );
+
+  return rows.map((row) => ({
+    jobId: row.job_id,
+    startedAt: row.started_at,
+    firstEstimateAt: row.first_estimate_at,
+  }));
+}

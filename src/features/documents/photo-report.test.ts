@@ -27,6 +27,7 @@ const company: CompanyRecord = {
   defaultTaxBase: 'materials',
   aiJobCeilingCents: 500,
   subscriptionStatus: 'active',
+  cancelAtPeriodEnd: false,
   trialEndsAt: null,
   currentPeriodEnd: null,
   estimateTerms: null,

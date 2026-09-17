@@ -211,7 +211,7 @@ export default function SendScreen() {
               }
               onPress={
                 billing && !billing.canSendEstimates
-                  ? () => router.push('/settings')
+                  ? () => router.push('/subscribe')
                   : sharePdf
               }
               disabled={busy !== null}
@@ -251,7 +251,7 @@ export default function SendScreen() {
           <TypeText role="body" tone="textMuted">
             {billing.message}
           </TypeText>
-          <Button label="Subscribe" onPress={() => router.push('/settings')} />
+          <Button label="Subscribe" onPress={() => router.push('/subscribe')} />
         </Card>
       ) : billing?.shouldPrompt ? (
         <Card>

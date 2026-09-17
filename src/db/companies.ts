@@ -32,6 +32,8 @@ export interface CompanyRecord {
   subscriptionStatus: SubscriptionStatus;
   trialEndsAt: number | null;
   currentPeriodEnd: number | null;
+  /** True once Stripe knows this period is the last one. */
+  cancelAtPeriodEnd: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -75,6 +77,7 @@ interface CompanyRow {
   subscription_status: string;
   trial_ends_at: number | null;
   current_period_end: number | null;
+  cancel_at_period_end: number;
   created_at: number;
   updated_at: number;
 }
@@ -100,6 +103,7 @@ function toRecord(row: CompanyRow): CompanyRecord {
     subscriptionStatus: row.subscription_status as SubscriptionStatus,
     trialEndsAt: row.trial_ends_at,
     currentPeriodEnd: row.current_period_end,
+    cancelAtPeriodEnd: row.cancel_at_period_end === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -171,6 +175,7 @@ export function billingState(company: CompanyRecord): BillingState {
     status: company.subscriptionStatus,
     trialEndsAt: company.trialEndsAt,
     currentPeriodEnd: company.currentPeriodEnd,
+    cancelAtPeriodEnd: company.cancelAtPeriodEnd,
   };
 }
 

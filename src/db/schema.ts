@@ -41,6 +41,9 @@ create table if not exists companies (
   subscription_status  text not null default 'trialing',
   trial_ends_at        integer,
   current_period_end   integer,
+  -- Stripe's word for "this is the last period". Kept so the app can say
+  -- "cancels on the 4th" instead of treating a still-live subscription as gone.
+  cancel_at_period_end integer not null default 0,
   created_at        integer not null,
   updated_at        integer not null,
   deleted_at        integer

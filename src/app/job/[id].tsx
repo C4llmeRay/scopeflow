@@ -259,8 +259,14 @@ export default function JobDetailScreen() {
         <Card>
           <TypeText role="body" tone="warn">
             {untagged} {untagged === 1 ? 'photo is' : 'photos are'} not tagged to a
-            room yet. Sort them from the camera screen.
+            room yet. An untagged photo is missing from the photo report and from
+            anything the AI reasons about for that room.
           </TypeText>
+          <Button
+            label={`Sort ${untagged} ${untagged === 1 ? 'photo' : 'photos'}`}
+            variant="secondary"
+            onPress={() => router.push(`/job/${id}/sort`)}
+          />
         </Card>
       ) : null}
     </Screen>

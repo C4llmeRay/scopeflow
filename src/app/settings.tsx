@@ -15,7 +15,8 @@ import { StyleSheet, TextInput, View } from 'react-native';
 
 import { Button, Card, Chip, InlineField, Label, NotesField, Screen, TypeText } from '@/components/ui';
 import { openLocalDatabase } from '@/db/client';
-import { saveCompany } from '@/db/companies';
+import { billingState, saveCompany } from '@/db/companies';
+import { jobTimings } from '@/db/estimates';
 import {
   ACCEPTANCE_FLOOR,
   acceptanceRates,
@@ -24,6 +25,9 @@ import {
   type FeatureAcceptance,
 } from '@/features/ai/acceptance';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { entitlement, type Entitlement } from '@/features/billing/entitlement';
+import { pullBillingState } from '@/features/billing/sync';
+import { timeToEstimate, type TimeToEstimate } from '@/features/metrics/time-to-estimate';
 import { currentCompanyId, ensureCompany } from '@/features/jobs/useCompany';
 import {
   companyFormFrom,
@@ -40,6 +44,8 @@ export default function SettingsScreen() {
   const [saved, setSaved] = useState(false);
   const [aiCeilingText, setAiCeilingText] = useState('5.00');
   const [acceptance, setAcceptance] = useState<FeatureAcceptance[]>([]);
+  const [billing, setBilling] = useState<Entitlement | null>(null);
+  const [speed, setSpeed] = useState<TimeToEstimate | null>(null);
   const { phase, email, signOut } = useAuth();
   const c = useTheme();
 
@@ -54,8 +60,15 @@ export default function SettingsScreen() {
         // rather than blanking the terms the contractor has not seen yet.
         setValues(company.name.trim() ? companyFormFrom(company) : emptyCompanyForm());
         setAiCeilingText((company.aiJobCeilingCents / 100).toFixed(2));
+        setBilling(entitlement(billingState(company)));
         setAcceptance(await acceptanceRates(db, currentCompanyId()));
+        setSpeed(timeToEstimate(await jobTimings(db, currentCompanyId())));
         setLoaded(true);
+
+        // Then correct it from the server, because a subscription that started
+        // or lapsed since the app was last open is not knowable from here.
+        const fresh = await pullBillingState(db, currentCompanyId());
+        if (active && fresh) setBilling(entitlement(billingState(fresh)));
       })();
       return () => {
         active = false;
@@ -264,6 +277,40 @@ export default function SettingsScreen() {
           </TypeText>
         )}
       </Card>
+
+      {speed ? (
+        <Card>
+          <Label>Time to estimate</Label>
+          <TypeText role="body" tone={speed.medianMs === null ? 'textMuted' : 'success'}>
+            {speed.label}
+          </TypeText>
+          <TypeText role="caption" tone="textFaint">
+            {speed.medianMs === null
+              ? 'Measured from starting a job to freezing its first estimate. This is the number that says whether ScopeFlow is earning its place.'
+              : `Median across ${speed.sample} ${speed.sample === 1 ? 'job' : 'jobs'}` +
+                (speed.unfinished > 0
+                  ? `. ${speed.unfinished} ${speed.unfinished === 1 ? 'job has' : 'jobs have'} no estimate yet and are not counted.`
+                  : '.')}
+          </TypeText>
+        </Card>
+      ) : null}
+
+      {billing ? (
+      <Card>
+        <Label>Subscription</Label>
+        <TypeText role="body" tone={billing.urgent ? 'danger' : billing.shouldPrompt ? 'warn' : 'textMuted'}>
+          {billing.message}
+        </TypeText>
+        <TypeText role="caption" tone="textFaint">
+          Measuring, scoping and pricing never stop. Only sending does.
+        </TypeText>
+        <Button
+          label={billing.canSendEstimates ? 'Manage subscription' : 'Subscribe'}
+          variant={billing.canSendEstimates ? 'secondary' : 'primary'}
+          onPress={() => router.push('/subscribe')}
+        />
+      </Card>
+      ) : null}
 
       <Card>
         <Label>Signed in</Label>

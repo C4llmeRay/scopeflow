@@ -39,6 +39,7 @@ const company = (over: Partial<CompanyRecord> = {}): CompanyRecord => ({
   defaultTaxBase: 'materials',
   aiJobCeilingCents: 500,
   subscriptionStatus: 'active',
+  cancelAtPeriodEnd: false,
   trialEndsAt: null,
   currentPeriodEnd: null,
   estimateTerms: 'Prices valid for 30 days.',

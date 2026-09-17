@@ -50,7 +50,7 @@ Supabase exists.
 |---|---|
 | `npm start` | Expo dev server |
 | `npm run android` / `ios` | Dev server, opening that platform |
-| `npm test` | Vitest — 649 tests |
+| `npm test` | Vitest — 717 tests |
 | `npm run test:watch` | Same, watching |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run db:verify` | Runs every migration against real Postgres in Docker, then the RLS smoke suite |
@@ -132,6 +132,32 @@ Work recorded before signing in is adopted into the real company
 (`src/features/auth/adopt.ts`): rows, the profile, and the tenant id *inside
 already-queued payloads*, which would otherwise be refused by RLS forever.
 
+### Billing
+
+Stripe Checkout in a system browser — the app never sees a card number, so it
+cannot leak one. Three functions: `billing` mints Checkout and Billing Portal
+URLs, `billing-return` is an https hop back to the app (Stripe refuses to
+redirect to a `scopeflow://` URL), and `stripe-webhook` is **the only thing
+allowed to say a company has paid**. Nothing marks a subscription active from
+the success redirect; a redirect is a URL anyone can open.
+
+The webhook is built around two facts Stripe states plainly and integrations
+routinely ignore. Delivery is **at least once**, so the event id is a primary
+key and a replay collides. Delivery is **unordered**, so an event older than
+the last one applied is recorded and dropped — otherwise a stale `active`
+arriving after a cancellation silently undoes it.
+
+The decision logic is pure and lives in
+`supabase/functions/_shared/subscription.ts`, imported directly by the Vitest
+suite rather than copied, so the tests run the code that ships. It also handles
+the field Stripe moved: `current_period_end` lives on the subscription *item*
+from API version 2025-03-31 onward, and reading only the old location returns
+null silently — which is what the grace-period maths measures from.
+
+Billing state is the one thing that syncs **downward**. Everything else in
+ScopeFlow is pushed from the phone; the phone is not allowed to decide whether
+the contractor has paid.
+
 ---
 
 ## Layout
@@ -148,17 +174,21 @@ src/
     documents/  estimate + photo report HTML, CSV, PDF, sharing
     rooms/      room wizard, openings editor, dimension parsing
     pricing/    CSV import, price forms, starter list
-    damage/ notes/ scope/ billing/ onboarding/ settings/
+    billing/    entitlement rules, Stripe checkout, downward sync
+    photos/     the untagged-photo sort queue
+    metrics/    time to estimate
+    damage/ notes/ scope/ onboarding/ settings/
   theme/        tokens, thumb-reachable target sizes
 supabase/
-  migrations/   9 migrations
-  functions/ai/ Deno Edge Function — the only thing holding the Claude key
-  test/         RLS + storage smoke suite
+  migrations/   10 migrations
+  functions/    ai, billing, billing-return, stripe-webhook (Deno)
+  functions/_shared/  pure logic the app's own test suite imports directly
+  test/         RLS + storage + billing smoke suite
 ```
 
-Routes: `/start`, `/sign-in`, `/settings`, `/prices`, `/prices/[id]`,
-`/prices/import`, and per job `/job/[id]` plus `capture`, `room-wizard`,
-`damage`, `notes`, `estimate`, `line`, `send`.
+Routes: `/start`, `/sign-in`, `/settings`, `/subscribe`, `/prices`,
+`/prices/[id]`, `/prices/import`, and per job `/job/[id]` plus `capture`,
+`room-wizard`, `damage`, `notes`, `sort`, `estimate`, `line`, `send`.
 
 `src/core/` is pure and imports nothing else from the app — it is the part worth
 trusting.
@@ -174,17 +204,58 @@ supabase functions deploy ai
 npm run db:verify          # or check it against plain Postgres in Docker
 ```
 
-Nine migrations. **RLS is on for every table**, and the smoke suite asserts
+Ten migrations. **RLS is on for every table**, and the smoke suite asserts
 that, along with cross-tenant refusal, storage isolation, share-link revocation,
 the AI meter being unwritable by the party it meters, and billing state being
 writable only by the Stripe webhook.
 
+### Edge Functions
+
+Three, and two of them need a deploy flag that is easy to miss:
+
+```bash
+supabase functions deploy ai
+supabase functions deploy billing
+supabase functions deploy stripe-webhook  --no-verify-jwt   # required
+supabase functions deploy billing-return  --no-verify-jwt   # required
+```
+
+`--no-verify-jwt` is not optional on those two. Supabase verifies a JWT on
+functions by default; Stripe does not send one, and neither does a browser
+coming back from a Stripe page. Without the flag every webhook is rejected with
+a 401 and the first you know about it is a customer who paid and cannot send.
+The webhook still authenticates — by verifying Stripe's signature, which is the
+correct check for that endpoint.
+
 ### Required configuration
 
-Because sign-in uses OTP codes, **Supabase's default email template will not
-work**. In the dashboard, under *Authentication → Email Templates → Magic Link*,
-add `{{ .Token }}` to the body. The stock template contains only
-`{{ .ConfirmationURL }}`, so no code is sent and verification always fails.
+Three things the code cannot do for itself.
+
+**1. The sign-in email template.** Sign-in uses OTP codes, so **Supabase's
+default template will not work**. In the dashboard, under *Authentication →
+Email Templates → Magic Link*, add `{{ .Token }}` to the body. The stock
+template contains only `{{ .ConfirmationURL }}`, so no code is sent and
+verification always fails.
+
+**2. Stripe secrets**, set on the functions, never in the app:
+
+```bash
+supabase secrets set STRIPE_SECRET_KEY=sk_live_...
+supabase secrets set STRIPE_PRICE_ID=price_...          # the monthly plan
+supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...    # from the endpoint
+```
+
+**3. The webhook endpoint**, in the Stripe dashboard, pointed at
+`https://<project>.supabase.co/functions/v1/stripe-webhook`, subscribed to:
+
+```
+checkout.session.completed
+customer.subscription.created
+customer.subscription.updated
+customer.subscription.deleted
+```
+
+Test it with `stripe trigger customer.subscription.updated` before trusting it.
 
 ### Secrets
 
@@ -219,12 +290,15 @@ add `{{ .Token }}` to the body. The stock template contains only
 
 - Nothing has run on a **physical device**, against a **real Supabase project**,
   or against the **real Claude API**. That is the next thing.
-- Stripe checkout and the webhook endpoint. The schema and entitlement logic are
-  done; the payment flow is not.
-- A photo sort screen, for frames captured before a room existed.
-- Analytics — specifically time-to-estimate, the one number that says whether
-  this app is worth using.
-- Store submission.
+- Store submission — and one policy question to settle first. Apple requires
+  in-app purchase for digital subscriptions, with a carve-out for business
+  software sold to businesses (App Store Review Guideline 3.1.3(e)). ScopeFlow
+  is B2B and plausibly sits inside it, but "plausibly" is not a filing strategy:
+  confirm the classification before submitting, or the review is rejected and
+  the billing flow has to be rebuilt on StoreKit. Google Play's equivalent
+  carve-out is broader and Stripe is fine there.
+- Email delivery of an estimate straight from the app, rather than the share
+  sheet.
 
 ---
 
