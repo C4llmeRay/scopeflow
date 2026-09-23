@@ -20,8 +20,10 @@ import {
   setCurrentIdentity,
 } from './current';
 import {
+  canSignInWithPassword,
   checkAuthForm,
   describeAuthError,
+  describePasswordError,
   isCompleteOtp,
   isPlausibleEmail,
   normalizeEmail,
@@ -317,5 +319,28 @@ describe('adopting work done before signing in', () => {
     const result = await adoptLocalData(empty, REAL, PLACEHOLDER_COMPANY_ID, 2_000);
     expect(result.rowsMoved).toBe(0);
     expect(await hasOrphanedData(empty)).toBe(false);
+  });
+});
+
+describe('password sign-in', () => {
+  it('needs a plausible email and some password', () => {
+    expect(canSignInWithPassword('a@b.co', 'x')).toBe(true);
+    expect(canSignInWithPassword(' A@B.co ', 'x')).toBe(true);
+    expect(canSignInWithPassword('a@b.co', '')).toBe(false);
+    expect(canSignInWithPassword('nope', 'secret')).toBe(false);
+  });
+
+  it('says plainly when the credentials are wrong', () => {
+    expect(describePasswordError(new Error('Invalid login credentials'))).toBe(
+      'That email and password do not match an account.',
+    );
+  });
+
+  it('says how to fix an unconfirmed dashboard account', () => {
+    expect(describePasswordError(new Error('Email not confirmed'))).toMatch(/Auto Confirm User/);
+  });
+
+  it('falls back to the general wording for everything else', () => {
+    expect(describePasswordError(new Error('Failed to fetch'))).toMatch(/No connection/);
   });
 });

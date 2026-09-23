@@ -1,6 +1,11 @@
 /**
  * Signing in.
  *
+ * Email and password by default, for accounts created in the Supabase
+ * dashboard: it needs no email to be sent, which a free Supabase project cannot
+ * reliably do. The emailed six-digit code below is kept for when email works
+ * (EXPO_PUBLIC_EMAIL_CODES=1).
+ *
  * A six-digit code rather than a tappable link. A link has to survive whichever
  * browser the mail app chooses, come back through a custom URL scheme, and land
  * in the right app instance. A code works from any device and any mail client —
@@ -16,20 +21,43 @@ import { StyleSheet, TextInput, View } from 'react-native';
 
 import { Button, Card, Label, Screen, TypeText } from '@/components/ui';
 import { useAuth } from '@/features/auth/AuthProvider';
-import { checkAuthForm, normalizeOtp, OTP_LENGTH } from '@/features/auth/session';
+import {
+  canSignInWithPassword,
+  checkAuthForm,
+  normalizeOtp,
+  OTP_LENGTH,
+} from '@/features/auth/session';
+import { emailCodesEnabled } from '@/lib/demo-mode';
 import { radius, space, type } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
 export default function SignInScreen() {
-  const { sendCode, verifyCode } = useAuth();
+  const { sendCode, verifyCode, signInWithPassword } = useAuth();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
-  const [step, setStep] = useState<'email' | 'code'>('email');
+  const [step, setStep] = useState<'password' | 'email' | 'code'>('password');
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const c = useTheme();
 
-  const checks = useMemo(() => checkAuthForm({ email, code, step }), [code, email, step]);
+  const checks = useMemo(
+    () => checkAuthForm({ email, code, step: step === 'code' ? 'code' : 'email' }),
+    [code, email, step],
+  );
+
+  const signIn = useCallback(async () => {
+    setBusy(true);
+    setProblem(null);
+    try {
+      await signInWithPassword(email, password);
+      router.replace('/');
+    } catch (error) {
+      setProblem((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }, [email, password, signInWithPassword]);
 
   const send = useCallback(async () => {
     setBusy(true);
@@ -60,13 +88,42 @@ export default function SignInScreen() {
   return (
     <Screen
       footer={
-        step === 'email' ? (
-          <Button
-            testID="send-code"
-            label={busy ? 'Sending…' : 'Email me a code'}
-            onPress={() => void send()}
-            disabled={!checks.canSendCode || busy}
-          />
+        step === 'password' ? (
+          <>
+            <Button
+              testID="sign-in"
+              label={busy ? 'Signing in…' : 'Sign in'}
+              onPress={() => void signIn()}
+              disabled={!canSignInWithPassword(email, password) || busy}
+            />
+            {emailCodesEnabled() ? (
+              <Button
+                label="Email me a code instead"
+                variant="ghost"
+                onPress={() => {
+                  setStep('email');
+                  setProblem(null);
+                }}
+              />
+            ) : null}
+          </>
+        ) : step === 'email' ? (
+          <>
+            <Button
+              testID="send-code"
+              label={busy ? 'Sending…' : 'Email me a code'}
+              onPress={() => void send()}
+              disabled={!checks.canSendCode || busy}
+            />
+            <Button
+              label="Use a password instead"
+              variant="ghost"
+              onPress={() => {
+                setStep('password');
+                setProblem(null);
+              }}
+            />
+          </>
         ) : (
           <>
             <Button
@@ -103,7 +160,62 @@ export default function SignInScreen() {
         </Card>
       ) : null}
 
-      {step === 'email' ? (
+      {step === 'password' ? (
+        <View style={styles.section}>
+          <Label>Email</Label>
+          <TextInput
+            testID="password-email"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="you@yourcompany.com"
+            placeholderTextColor={c.textFaint}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
+            inputMode="email"
+            autoFocus
+            style={[
+              type.body as never,
+              styles.input,
+              {
+                backgroundColor: c.surface,
+                borderColor: checks.emailError ? c.danger : c.border,
+                color: c.text,
+              },
+            ]}
+          />
+          {checks.emailError ? (
+            <TypeText role="caption" tone="danger">
+              {checks.emailError}
+            </TypeText>
+          ) : null}
+          <Label>Password</Label>
+          <TextInput
+            testID="password"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Password"
+            placeholderTextColor={c.textFaint}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="password"
+            textContentType="password"
+            onSubmitEditing={() => {
+              if (canSignInWithPassword(email, password) && !busy) void signIn();
+            }}
+            style={[
+              type.body as never,
+              styles.input,
+              { backgroundColor: c.surface, borderColor: c.border, color: c.text },
+            ]}
+          />
+          <TypeText role="caption" tone="textFaint">
+            Your company administrator gives you these.
+          </TypeText>
+        </View>
+      ) : step === 'email' ? (
         <View style={styles.section}>
           <Label>Your email</Label>
           <TextInput

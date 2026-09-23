@@ -66,6 +66,28 @@ export function checkAuthForm(state: AuthFormState): AuthFormChecks {
  * Supabase's own messages are written for developers. "Token has expired or is
  * invalid" tells somebody standing in a driveway nothing about what to do.
  */
+/**
+ * Password sign-in, for accounts created in the Supabase dashboard. It needs no
+ * email at all, which is what a demo on a free project needs: Supabase's
+ * built-in mailer only reaches the project's own team, a few times an hour.
+ */
+export function canSignInWithPassword(email: string, password: string): boolean {
+  return isPlausibleEmail(normalizeEmail(email)) && password.length > 0;
+}
+
+export function describePasswordError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error ?? '');
+  const message = raw.toLowerCase();
+
+  if (message.includes('invalid login credentials')) {
+    return 'That email and password do not match an account.';
+  }
+  if (message.includes('email not confirmed')) {
+    return 'This account is not confirmed yet. In Supabase, open the user and confirm it, or create it again with "Auto Confirm User" ticked.';
+  }
+  return describeAuthError(error);
+}
+
 export function describeAuthError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error ?? '');
   const message = raw.toLowerCase();

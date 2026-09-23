@@ -50,7 +50,7 @@ Supabase exists.
 |---|---|
 | `npm start` | Expo dev server |
 | `npm run android` / `ios` | Dev server, opening that platform |
-| `npm test` | Vitest — 736 tests |
+| `npm test` | Vitest — 740 tests |
 | `npm run test:watch` | Same, watching |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run db:verify` | Runs every migration against real Postgres in Docker, then the RLS smoke suite |
@@ -125,9 +125,13 @@ be taxed correctly.
 
 ### Auth
 
-Email plus a **six-digit code**, not a magic link. A link has to survive a mail
-client, a redirect, and a deep-link association on a phone that may not have the
-app installed yet; a code works from any device.
+Email and password by default, for accounts created in the Supabase dashboard
+(*Authentication → Users → Add user*, with *Auto Confirm User*) — nothing is
+emailed, which matters on a free project whose built-in mailer only reaches the
+project's own team. With working email (custom SMTP), `EXPO_PUBLIC_EMAIL_CODES=1`
+adds sign-in by a **six-digit code**, not a magic link: a link has to survive a
+mail client, a redirect, and a deep-link association on a phone that may not
+have the app installed yet; a code works from any device.
 
 Four phases: `loading` → `local` | `signed-out` | `signed-in`. The rule is that
 **a cached session is enough to work** — signing in is the only thing in

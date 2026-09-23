@@ -5,6 +5,9 @@
  *                                     demo with no backend and claude with one.
  *   EXPO_PUBLIC_DEMO_TOOLS=1          Keeps "Load a sample job" once a backend
  *                                     is configured. Always on without one.
+ *   EXPO_PUBLIC_EMAIL_CODES=1         Offers "email me a code" on the sign-in
+ *                                     screen. Off by default: it needs working
+ *                                     email (custom SMTP on a free project).
  *
  * Both are read as literal `process.env.EXPO_PUBLIC_*` expressions because
  * Expo inlines them at build time and only recognises that exact form.
@@ -23,4 +26,9 @@ export function isDemoAi(): boolean {
 /** True when demo helpers — the sample job — are offered. */
 export function showDemoTools(): boolean {
   return !isSupabaseConfigured() || process.env.EXPO_PUBLIC_DEMO_TOOLS === '1';
+}
+
+/** True when sign-in may offer an emailed code as well as a password. */
+export function emailCodesEnabled(): boolean {
+  return process.env.EXPO_PUBLIC_EMAIL_CODES === '1';
 }

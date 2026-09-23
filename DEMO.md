@@ -57,18 +57,21 @@ line items, estimates, notes, and photos in the private `job-media` bucket.
    `.supabase.co` in the project URL; it asks for the database password.
 3. `npx supabase db push` — creates every table, the security rules and the
    photo bucket. Do **not** add `--include-seed`: the seed is test data.
-4. `npx supabase config push` — installs the sign-in email that carries the
-   six-digit code (`supabase/templates/`). Without it, no code arrives.
+4. Create the people who will sign in: *Authentication → Users → Add user →
+   Create new user*, enter an email and a password, and tick **Auto Confirm
+   User**. No email is sent. Each new account gets its own empty company at its
+   first sign-in; accounts that should share jobs are not supported yet.
 5. In `.env`: `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`
    from the dashboard (Project Settings → API; the *anon* / *publishable* key,
    never the service role key), plus `EXPO_PUBLIC_AI_MODE=demo` and
    `EXPO_PUBLIC_DEMO_TOOLS=1`.
-6. `npx expo start --clear` — `--clear` matters after any `.env` change.
+6. `npx expo start --clear` — `--clear` matters after any `.env` change. Sign
+   in with the email and password from step 4.
 
-**Sign-in email limits.** Supabase's built-in mailer only delivers to members
-of your Supabase team, and only a few emails an hour. Sign in on the demo phone
-the day before — the session persists. For a client to sign in with their own
-address, add an SMTP provider under Authentication → Emails → SMTP Settings.
+**Emailed codes** are off by default. They need working email, which a free
+Supabase project only gets with a custom SMTP provider (Authentication → Emails
+→ SMTP Settings); then run `npx supabase config push` to install the templates
+in `supabase/templates/` and set `EXPO_PUBLIC_EMAIL_CODES=1`.
 
 **Photos** upload their small copy on any connection and the full-size original
 only on Wi-Fi, so "N photos uploading" on mobile data is expected.

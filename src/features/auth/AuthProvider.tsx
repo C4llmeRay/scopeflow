@@ -26,7 +26,7 @@ import { openLocalDatabase } from '@/db/client';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 import { adoptLocalData, PLACEHOLDER_COMPANY_ID } from './adopt';
 import { setCurrentIdentity } from './current';
-import { describeAuthError, normalizeEmail, normalizeOtp } from './session';
+import { describeAuthError, describePasswordError, normalizeEmail, normalizeOtp } from './session';
 
 export type AuthPhase =
   /** Reading the stored session. Nothing should render yet. */
@@ -44,6 +44,8 @@ export interface AuthValue {
   sendCode: (email: string) => Promise<void>;
   /** Verifies it and resolves the company. */
   verifyCode: (email: string, code: string) => Promise<void>;
+  /** Email and password, for accounts made in the Supabase dashboard. */
+  signInWithPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -207,6 +209,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [adopt],
   );
 
+  const signInWithPassword = useCallback(
+    async (raw: string, password: string) => {
+      const { data, error } = await getSupabase().auth.signInWithPassword({
+        email: normalizeEmail(raw),
+        password,
+      });
+      if (error) throw new Error(describePasswordError(error));
+      if (!data.session) throw new Error('Signing in did not return a session.');
+      await adopt(data.session);
+    },
+    [adopt],
+  );
+
   const signOut = useCallback(async () => {
     if (isSupabaseConfigured()) await getSupabase().auth.signOut();
     setCurrentIdentity(null);
@@ -216,8 +231,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthValue>(
-    () => ({ phase, companyId, email, sendCode, verifyCode, signOut }),
-    [companyId, email, phase, sendCode, signOut, verifyCode],
+    () => ({ phase, companyId, email, sendCode, verifyCode, signInWithPassword, signOut }),
+    [companyId, email, phase, sendCode, signInWithPassword, signOut, verifyCode],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
