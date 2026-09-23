@@ -14,6 +14,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { Button, Card, Chip, InlineField, Label, NotesField, Screen, TypeText } from '@/components/ui';
+import { goBack } from '@/lib/navigation';
 import { openLocalDatabase } from '@/db/client';
 import { billingState, saveCompany } from '@/db/companies';
 import { jobTimings } from '@/db/estimates';
@@ -155,7 +156,7 @@ export default function SettingsScreen() {
             onPress={() => void save()}
             disabled={!state.canSave}
           />
-          <Button label="Done" variant="ghost" onPress={() => router.back()} />
+          <Button label="Done" variant="ghost" onPress={() => goBack()} />
         </>
       }
     >
@@ -167,7 +168,7 @@ export default function SettingsScreen() {
       </View>
 
       {field('Business name', 'name', 'Harbor Restoration LLC', { error: state.errors.name })}
-      {field('Licence number', 'licenseNo', 'TX-RC-118244')}
+      {field('License number', 'licenseNo', 'TX-RC-118244')}
       {field('Phone', 'phone', '(512) 555-0142', { keyboardType: 'phone-pad' })}
       {field('Email', 'email', 'office@example.com', {
         keyboardType: 'email-address',

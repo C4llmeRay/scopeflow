@@ -14,6 +14,7 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button, Card, Label, QuantityRow, Screen, TypeText } from '@/components/ui';
+import { goBack } from '@/lib/navigation';
 import { formatUsd } from '@/core/units';
 import { openLocalDatabase } from '@/db/client';
 import { billingState, getCompany } from '@/db/companies';
@@ -27,7 +28,8 @@ import {
 } from '@/db/estimates';
 import { listDamages } from '@/db/damages';
 import { listRooms } from '@/db/rooms';
-import { AiBudgetExceeded, AiUnavailable, writeNarrative } from '@/features/ai/client';
+import { AiBudgetExceeded, AiUnavailable, isDemoAi, writeNarrative } from '@/features/ai/client';
+import { DEMO_AI_LABEL } from '@/features/ai/demo';
 import { cleanNarrative } from '@/features/ai/resolve';
 import { currentCompanyId } from '@/features/jobs/useCompany';
 import { canTransition, getJob, setJobStatus, type JobRecord } from '@/db/jobs';
@@ -298,6 +300,11 @@ export default function SendScreen() {
             {latest.narrative ? (
               <>
                 <TypeText role="body">{latest.narrative}</TypeText>
+                {isDemoAi() ? (
+                  <TypeText role="caption" tone="textFaint">
+                    {DEMO_AI_LABEL}
+                  </TypeText>
+                ) : null}
                 {latest.sentAt === null ? (
                   <Button
                     label={busy === 'narrative' ? 'Rewriting…' : 'Rewrite it'}
@@ -423,7 +430,7 @@ export default function SendScreen() {
         </>
       )}
 
-      <Button label="Back to the estimate" variant="ghost" onPress={() => router.back()} />
+      <Button label="Back to the estimate" variant="ghost" onPress={() => goBack()} />
     </Screen>
   );
 }

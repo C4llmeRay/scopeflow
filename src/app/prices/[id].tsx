@@ -7,11 +7,12 @@
  * because it is the thing that decides whether tax comes out right.
  */
 
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { Button, Card, Chip, InlineField, Label, Screen, TypeText } from '@/components/ui';
+import { goBack } from '@/lib/navigation';
 import { formatUsd } from '@/core/units';
 import { openLocalDatabase } from '@/db/client';
 import {
@@ -105,13 +106,13 @@ export default function PriceEditorScreen() {
       // Editing a seed row makes it the contractor's own.
       isSeed: false,
     });
-    router.back();
+    goBack();
   }, [codeTaken, id, isNew, state, values]);
 
   const remove = useCallback(async () => {
     const db = await openLocalDatabase();
     await softDeletePriceItem(db, id);
-    router.back();
+    goBack();
   }, [id]);
 
   if (!loaded) return null;
@@ -129,7 +130,7 @@ export default function PriceEditorScreen() {
           {!isNew ? (
             <Button label="Delete" variant="danger" onPress={() => void remove()} />
           ) : null}
-          <Button label="Cancel" variant="ghost" onPress={() => router.back()} />
+          <Button label="Cancel" variant="ghost" onPress={() => goBack()} />
         </>
       }
     >

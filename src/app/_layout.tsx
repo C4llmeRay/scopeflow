@@ -1,7 +1,7 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { ActivityIndicator, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, useColorScheme, View } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
 
@@ -43,11 +43,37 @@ function Guarded({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * On the web demo, the app sits in a phone-width column. ScopeFlow is designed
+ * for one hand on a phone; stretched across a laptop screen it reads as a
+ * different, worse product.
+ */
+function PhoneFrame({ children, backdrop }: { children: React.ReactNode; backdrop: string }) {
+  if (Platform.OS !== 'web') return <>{children}</>;
+  return (
+    <View style={[styles.backdrop, { backgroundColor: backdrop }]}>
+      <View style={styles.phone}>{children}</View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: { flex: 1, alignItems: 'center' },
+  phone: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 430,
+    overflow: 'hidden',
+    boxShadow: '0 0 40px rgba(0, 0, 0, 0.18)',
+  },
+});
+
 export default function RootLayout() {
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const c = colors[scheme];
 
   return (
+    <PhoneFrame backdrop={scheme === 'dark' ? '#0b0f14' : '#cfd6dd'}>
     <AuthProvider>
       <Guarded>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
@@ -97,5 +123,6 @@ export default function RootLayout() {
       </Stack>
       </Guarded>
     </AuthProvider>
+    </PhoneFrame>
   );
 }

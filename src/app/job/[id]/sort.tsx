@@ -18,6 +18,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Button, Card, Chip, Label, Screen, TypeText } from '@/components/ui';
+import { goBack } from '@/lib/navigation';
 import { openLocalDatabase } from '@/db/client';
 import { assignPhotoToRoom, listPhotos, type PhotoRecord } from '@/db/photos';
 import { listRooms, type RoomRecord } from '@/db/rooms';
@@ -95,7 +96,7 @@ export default function SortPhotosScreen() {
               label="Add a room"
               onPress={() => router.push(`/job/${jobId}/room-wizard`)}
             />
-            <Button label="Back" variant="ghost" onPress={() => router.back()} />
+            <Button label="Back" variant="ghost" onPress={() => goBack()} />
           </>
         }
       >
@@ -112,7 +113,7 @@ export default function SortPhotosScreen() {
 
   if (!current) {
     return (
-      <Screen footer={<Button label="Done" onPress={() => router.back()} />}>
+      <Screen footer={<Button label="Done" onPress={() => goBack()} />}>
         <TypeText role="title">Sort photos</TypeText>
         <Card>
           <TypeText role="body" tone="success">
@@ -132,7 +133,7 @@ export default function SortPhotosScreen() {
       footer={
         <>
           <Button label="Skip for now" variant="secondary" onPress={skip} />
-          <Button label="Done" variant="ghost" onPress={() => router.back()} />
+          <Button label="Done" variant="ghost" onPress={() => goBack()} />
         </>
       }
     >

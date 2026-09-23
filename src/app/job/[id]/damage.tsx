@@ -12,7 +12,7 @@
  * straight into the measurement engine and the estimate.
  */
 
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -27,6 +27,7 @@ import {
   TypeText,
 } from '@/components/ui';
 import { explainFloodCut } from '@/core/floodcut';
+import { goBack } from '@/lib/navigation';
 import { openLocalDatabase } from '@/db/client';
 import {
   COMMON_MATERIALS,
@@ -144,7 +145,7 @@ export default function DamageSheetScreen() {
       });
     }
 
-    router.back();
+    goBack();
     sync.syncNow();
   }, [room, roomId, state, sync, values]);
 
@@ -162,7 +163,7 @@ export default function DamageSheetScreen() {
             onPress={() => void save()}
             disabled={!state.canSave}
           />
-          <Button label="Cancel" variant="ghost" onPress={() => router.back()} />
+          <Button label="Cancel" variant="ghost" onPress={() => goBack()} />
         </>
       }
     >

@@ -33,7 +33,8 @@ import { listOpenings, toCoreOpenings } from '@/db/openings';
 import { listPriceItems } from '@/db/price-items';
 import { listRooms, type RoomRecord } from '@/db/rooms';
 import { currentCompanyId } from '@/features/jobs/useCompany';
-import { AiBudgetExceeded, AiUnavailable, suggestScope } from '@/features/ai/client';
+import { AiBudgetExceeded, AiUnavailable, isDemoAi, suggestScope } from '@/features/ai/client';
+import { DEMO_AI_LABEL } from '@/features/ai/demo';
 import { resolveScopeSuggestion } from '@/features/ai/resolve';
 import { buildScope, type ScopeLine } from '@/features/scope/templates';
 import { newId } from '@/lib/id';
@@ -189,6 +190,7 @@ export default function EstimateScreen() {
             ? `${resolved.rejectedCodes.length} used codes you do not have`
             : null,
           resolved.unpriced.length > 0 ? `unpriced: ${resolved.unpriced.join(', ')}` : null,
+          isDemoAi() ? DEMO_AI_LABEL : null,
         ].filter(Boolean);
 
         setAiNote(parts.join(' · '));

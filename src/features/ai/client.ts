@@ -28,6 +28,7 @@ import {
   type PhotoContext,
   type ScopeContext,
 } from './prompts';
+import { demoNarrative, demoScopeSuggestion } from './demo';
 
 export class AiUnavailable extends Error {
   constructor(message: string) {
@@ -56,6 +57,20 @@ interface InvokeArgs {
   imageBase64?: string;
 }
 
+/**
+ * True when there is no backend, so the scope and narrative calls answer from
+ * demo.ts instead. Screens use it to label that output as not coming from Claude.
+ */
+export const isDemoAi = (): boolean => !isSupabaseConfigured();
+
+const NO_USAGE: AiUsage = {
+  inputTokens: 0,
+  outputTokens: 0,
+  cacheReadTokens: 0,
+  cacheCreationTokens: 0,
+  costCents: 0,
+};
+
 async function invoke<T>(args: InvokeArgs): Promise<{ result: T; usage: AiUsage }> {
   if (!isSupabaseConfigured()) {
     throw new AiUnavailable('AI needs a backend. Everything else works without one.');
@@ -82,13 +97,7 @@ async function invoke<T>(args: InvokeArgs): Promise<{ result: T; usage: AiUsage 
 
   return {
     result: body.result,
-    usage: body.usage ?? {
-      inputTokens: 0,
-      outputTokens: 0,
-      cacheReadTokens: 0,
-      cacheCreationTokens: 0,
-      costCents: 0,
-    },
+    usage: body.usage ?? NO_USAGE,
   };
 }
 
@@ -125,6 +134,11 @@ export async function suggestScope(
     throw new AiUnavailable('Import or seed a price list first — there is nothing to scope with.');
   }
 
+  if (isDemoAi()) {
+    const codes = priceItems.map((item) => item.code);
+    return { result: demoScopeSuggestion(context, codes) as unknown, usage: NO_USAGE };
+  }
+
   return invoke<unknown>({
     action: 'suggest_scope',
     jobId,
@@ -156,6 +170,8 @@ export async function writeNarrative(
   jobId: string,
   context: NarrativeContext,
 ) {
+  if (isDemoAi()) return { result: demoNarrative(context) as unknown, usage: NO_USAGE };
+
   return invoke<unknown>({
     action: 'write_narrative',
     jobId,

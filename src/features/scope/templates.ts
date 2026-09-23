@@ -103,7 +103,11 @@ export function buildScope(input: ScopeInput): ScopeLine[] {
 
   // ---- Mitigation -------------------------------------------------------
   if (wetFlooring) {
-    add('WTR-EXT', q.floorSf, 'Standing water on the floor');
+    // Extraction is priced by what the water is sitting in: a carpet wand pulls
+    // water out of fibre, a hard surface is squeegeed.
+    const soft = materials.has('carpet') || materials.has('carpet pad');
+    if (soft) add('WTR-EXT', q.floorSf, 'Standing water on the floor');
+    else add('WTR-EXT-H', q.floorSf, 'Standing water on a hard floor');
   }
 
   // ---- Flooring ---------------------------------------------------------

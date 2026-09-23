@@ -11,11 +11,11 @@
  * that the afternoon they have just spent is not being held hostage.
  */
 
-import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { Button, Card, Label, Screen, TypeText } from '@/components/ui';
+import { goBack } from '@/lib/navigation';
 import { openLocalDatabase } from '@/db/client';
 import { billingState, getCompany, type CompanyRecord } from '@/db/companies';
 import { entitlement, TRIAL_DAYS, type Entitlement } from '@/features/billing/entitlement';
@@ -150,7 +150,7 @@ export default function SubscribeScreen() {
               disabled={busy !== null}
             />
           ) : null}
-          <Button label="Back" variant="ghost" onPress={() => router.back()} />
+          <Button label="Back" variant="ghost" onPress={() => goBack()} />
         </>
       }
     >

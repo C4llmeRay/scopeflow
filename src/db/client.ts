@@ -3,6 +3,7 @@ import * as SQLite from 'expo-sqlite';
 import { SqliteOutboxStore } from '../sync/sqlite-store';
 import { AI_QUEUE_TABLE } from '../features/ai/queue';
 import { UPLOAD_QUEUE_TABLE } from '../sync/uploads';
+import { claimDatabase } from './claim';
 import { expoSqliteAdapter } from './expo-adapter';
 import { applyColumnAdditions } from './migrate';
 import { APP_SCHEMA } from './schema';
@@ -12,6 +13,14 @@ export type { LocalDatabase } from './types';
 
 export const DATABASE_NAME = 'scopeflow.db';
 
+/**
+ * Set only for the hosted web demo (scripts/export-portable.mjs). The page may
+ * be mounted twice at once by whatever embeds it, and expo-sqlite's browser
+ * storage allows one live instance per site — so each visit gets its own
+ * in-memory database instead, which also means every visitor starts clean.
+ */
+const EPHEMERAL = process.env.EXPO_PUBLIC_EPHEMERAL_DB === '1';
+
 let opened: Promise<LocalDatabase> | null = null;
 
 /**
@@ -20,7 +29,9 @@ let opened: Promise<LocalDatabase> | null = null;
  */
 export function openLocalDatabase(): Promise<LocalDatabase> {
   opened ??= (async () => {
-    const db = await SQLite.openDatabaseAsync(DATABASE_NAME);
+    // On web, waits for this tab's turn at the files. Instant on a phone.
+    if (!EPHEMERAL) await claimDatabase();
+    const db = await SQLite.openDatabaseAsync(EPHEMERAL ? ':memory:' : DATABASE_NAME);
     const adapter = expoSqliteAdapter(db);
     await adapter.exec(APP_SCHEMA);
     // `if not exists` does nothing for a database that already exists, so an

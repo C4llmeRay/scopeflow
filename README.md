@@ -50,15 +50,22 @@ Supabase exists.
 |---|---|
 | `npm start` | Expo dev server |
 | `npm run android` / `ios` | Dev server, opening that platform |
-| `npm test` | Vitest — 717 tests |
+| `npm test` | Vitest — 724 tests |
 | `npm run test:watch` | Same, watching |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run db:verify` | Runs every migration against real Postgres in Docker, then the RLS smoke suite |
 | `npm run preview:docs` | Renders the estimate + photo report to HTML in `.preview/` so you can open them in a browser |
 | `npm run lint` | `expo lint` |
+| `npm run demo:web` | Builds the web version and serves it with the headers expo-sqlite needs, on `:8090` |
+| `npm run serve:web` | Serves the last web build without rebuilding |
 
-`npm run web` is listed by the Expo template but **web is not a target** — the
-bundle fails on `expo-sqlite`'s WASM build, and 99% of use is on a phone.
+**Demoing:** see [DEMO.md](DEMO.md). With no backend configured, the job list
+offers *Load a sample job*, and the AI buttons are answered by labelled
+on-device rules (`src/features/ai/demo.ts`) instead of Claude.
+
+The **web build is for demos**, not a product target — 99% of use is on a
+phone. It needs cross-origin isolation (expo-sqlite uses SharedArrayBuffer),
+which `scripts/serve-web.mjs` provides and `expo start --web` does not.
 
 ---
 
