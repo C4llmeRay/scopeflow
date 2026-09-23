@@ -1,8 +1,9 @@
 # Demoing ScopeFlow
 
-Three ways to show it. All run with **no backend and no `.env` keys** — the app
-works locally, and the AI steps are answered by on-device demo rules that are
-labelled as such on screen.
+Every option below runs with **no backend and no `.env` keys** — the app works
+locally, and the AI steps are answered by on-device demo rules that are labelled
+as such on screen. To save everything to Supabase too, see
+[With the hosted backend](#with-the-hosted-backend).
 
 ## Option 0 — host it yourself
 
@@ -41,6 +42,39 @@ npm start                 # then scan the QR code
   is not in Expo Go); the notes screen falls back to typed notes.
 - A **development build** (`eas build --profile development`) has everything,
   including on-device transcription.
+
+## With the hosted backend
+
+Everything is then saved to Supabase as well as the phone: jobs, rooms,
+line items, estimates, notes, and photos in the private `job-media` bucket.
+
+**One-time setup** (from the repo root):
+
+1. Create a project at [supabase.com](https://supabase.com). Keep the database
+   password.
+2. `npx supabase login` (opens a browser), then
+   `npx supabase link --project-ref <ref>` — the ref is the part before
+   `.supabase.co` in the project URL; it asks for the database password.
+3. `npx supabase db push` — creates every table, the security rules and the
+   photo bucket. Do **not** add `--include-seed`: the seed is test data.
+4. `npx supabase config push` — installs the sign-in email that carries the
+   six-digit code (`supabase/templates/`). Without it, no code arrives.
+5. In `.env`: `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+   from the dashboard (Project Settings → API; the *anon* / *publishable* key,
+   never the service role key), plus `EXPO_PUBLIC_AI_MODE=demo` and
+   `EXPO_PUBLIC_DEMO_TOOLS=1`.
+6. `npx expo start --clear` — `--clear` matters after any `.env` change.
+
+**Sign-in email limits.** Supabase's built-in mailer only delivers to members
+of your Supabase team, and only a few emails an hour. Sign in on the demo phone
+the day before — the session persists. For a client to sign in with their own
+address, add an SMTP provider under Authentication → Emails → SMTP Settings.
+
+**Photos** upload their small copy on any connection and the full-size original
+only on Wi-Fi, so "N photos uploading" on mobile data is expected.
+
+The Edge Functions (`ai`, `billing`, …) are not needed for this: the demo AI
+runs on the phone, and billing needs Stripe. See the README when you want them.
 
 ## A five-minute script
 

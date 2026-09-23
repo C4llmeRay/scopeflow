@@ -36,7 +36,23 @@ export type SyncEntity =
  * sets deleted_at — which is what makes undo work and what keeps a claim's
  * history intact. 'purge' is reserved for the storage cleanup job.
  */
-export type SyncOp = 'upsert' | 'purge';
+export type SyncOp = 'upsert' | 'patch' | 'purge';
+
+/**
+ * 'patch' is a partial write to a row the server already has — a status, an
+ * upload path. It must go as an UPDATE: as an upsert, Postgres checks NOT NULL
+ * on the insert half before it ever looks for the existing row, so a payload
+ * without job_id fails even though the row is there.
+ */
+export const isWrite = (op: SyncOp): boolean => op === 'upsert' || op === 'patch';
+
+/**
+ * One pending write per record. Merging keeps them in order: a patch queued
+ * behind an unsent upsert rides along with it, and an upsert that arrives
+ * behind a pending patch turns it back into an upsert carrying both.
+ */
+export const mergedOp = (a: SyncOp, b: SyncOp): SyncOp =>
+  a === 'upsert' || b === 'upsert' ? 'upsert' : 'patch';
 
 export type OutboxState = 'pending' | 'synced' | 'failed';
 

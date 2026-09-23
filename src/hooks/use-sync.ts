@@ -7,6 +7,7 @@ import { openLocalDatabase } from '@/db/client';
 import { markVariantFailed, markVariantUploaded } from '@/db/photos';
 import { markVoiceNoteFailed, markVoiceNoteUploaded } from '@/db/voice-notes';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
+import { decodeDataUri, isDataUri } from '@/sync/data-uri';
 import { SyncEngine } from '@/sync/engine';
 import { createSupabaseTransport } from '@/sync/transport';
 import { createUploadTransport, type BinaryUploader } from '@/sync/uploads';
@@ -34,12 +35,14 @@ function storageUploader(): BinaryUploader {
   return {
     async upload({ localUri, remotePath, contentType }) {
       // Straight to bytes — no base64 round trip through a JS string, which
-      // matters when the original is several megabytes.
-      const body = await new File(localUri).bytes();
+      // matters when the original is several megabytes. A data URI (the sample
+      // job, a browser capture) carries its own bytes and its real type.
+      const inline = isDataUri(localUri) ? decodeDataUri(localUri) : null;
+      const body = inline ? inline.bytes : await new File(localUri).bytes();
 
       const { error } = await getSupabase()
         .storage.from(PHOTO_BUCKET)
-        .upload(remotePath, body, { contentType, upsert: true });
+        .upload(remotePath, body, { contentType: inline?.contentType ?? contentType, upsert: true });
 
       if (error) throw error;
     },

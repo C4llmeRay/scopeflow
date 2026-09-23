@@ -98,6 +98,7 @@ export default function RootLayout() {
         />
         <Stack.Screen name="job/[id]/notes" options={{ title: 'Voice notes' }} />
         <Stack.Screen name="job/[id]/sort" options={{ title: 'Sort photos' }} />
+        <Stack.Screen name="job/[id]/photos" options={{ title: 'Photos' }} />
         <Stack.Screen name="job/[id]/estimate" options={{ title: 'Estimate' }} />
         <Stack.Screen name="job/[id]/send" options={{ title: 'Send' }} />
         <Stack.Screen name="prices" options={{ title: 'Price list' }} />

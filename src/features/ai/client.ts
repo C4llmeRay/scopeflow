@@ -28,6 +28,7 @@ import {
   type PhotoContext,
   type ScopeContext,
 } from './prompts';
+import { isDemoAi } from '../../lib/demo-mode';
 import { demoNarrative, demoScopeSuggestion } from './demo';
 
 export class AiUnavailable extends Error {
@@ -57,11 +58,9 @@ interface InvokeArgs {
   imageBase64?: string;
 }
 
-/**
- * True when there is no backend, so the scope and narrative calls answer from
- * demo.ts instead. Screens use it to label that output as not coming from Claude.
- */
-export const isDemoAi = (): boolean => !isSupabaseConfigured();
+// When true, the scope and narrative calls answer from demo.ts instead, and
+// screens label that output as not coming from Claude. See lib/demo-mode.ts.
+export { isDemoAi };
 
 const NO_USAGE: AiUsage = {
   inputTokens: 0,

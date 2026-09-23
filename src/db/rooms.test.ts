@@ -172,7 +172,10 @@ describe('listRooms', () => {
 });
 
 describe('soft delete and undo', () => {
-  it('queues a delete as an upsert, never a DELETE', async () => {
+  // The row already synced, so the delete is a partial write to it: an UPDATE
+  // setting deleted_at. Never a DELETE, and never an upsert, whose insert half
+  // would fail NOT NULL on the columns this payload leaves out.
+  it('queues a delete as an update of deleted_at, never a DELETE', async () => {
     const db = await makeDb();
     await saveRoom(db, bedroom, 1_000);
     const [entry] = await db.outbox.all();
@@ -182,7 +185,7 @@ describe('soft delete and undo', () => {
 
     const queued = (await db.outbox.all()).filter((e) => e.state === 'pending');
     expect(queued).toHaveLength(1);
-    expect(queued[0].op).toBe('upsert');
+    expect(queued[0].op).toBe('patch');
     expect(queued[0].payload.deleted_at).toBe('1970-01-01T00:00:02.000Z');
   });
 

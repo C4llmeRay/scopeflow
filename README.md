@@ -50,7 +50,7 @@ Supabase exists.
 |---|---|
 | `npm start` | Expo dev server |
 | `npm run android` / `ios` | Dev server, opening that platform |
-| `npm test` | Vitest — 724 tests |
+| `npm test` | Vitest — 736 tests |
 | `npm run test:watch` | Same, watching |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run db:verify` | Runs every migration against real Postgres in Docker, then the RLS smoke suite |
@@ -187,7 +187,7 @@ src/
     damage/ notes/ scope/ onboarding/ settings/
   theme/        tokens, thumb-reachable target sizes
 supabase/
-  migrations/   10 migrations
+  migrations/   11 migrations
   functions/    ai, billing, billing-return, stripe-webhook (Deno)
   functions/_shared/  pure logic the app's own test suite imports directly
   test/         RLS + storage + billing smoke suite
@@ -211,7 +211,7 @@ supabase functions deploy ai
 npm run db:verify          # or check it against plain Postgres in Docker
 ```
 
-Ten migrations. **RLS is on for every table**, and the smoke suite asserts
+Eleven migrations. **RLS is on for every table**, and the smoke suite asserts
 that, along with cross-tenant refusal, storage isolation, share-link revocation,
 the AI meter being unwritable by the party it meters, and billing state being
 writable only by the Stripe webhook.
@@ -238,11 +238,12 @@ correct check for that endpoint.
 
 Three things the code cannot do for itself.
 
-**1. The sign-in email template.** Sign-in uses OTP codes, so **Supabase's
-default template will not work**. In the dashboard, under *Authentication →
-Email Templates → Magic Link*, add `{{ .Token }}` to the body. The stock
-template contains only `{{ .ConfirmationURL }}`, so no code is sent and
-verification always fails.
+**1. The sign-in email template.** Sign-in uses OTP codes, and Supabase's
+default template carries only a link, so no code is ever sent. The templates in
+`supabase/templates/` fix that and are wired up in `supabase/config.toml`:
+`supabase config push` applies them to a hosted project (the local stack picks
+them up by itself). To do it by hand instead: *Authentication → Email Templates
+→ Magic Link* and *Confirm signup*, and put `{{ .Token }}` in the body.
 
 **2. Stripe secrets**, set on the functions, never in the app:
 

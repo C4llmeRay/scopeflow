@@ -24,11 +24,11 @@ import {
   type JobSummary,
 } from '@/db/jobs';
 import type { CompanyRecord } from '@/db/companies';
-import { isDemoAi } from '@/features/ai/client';
 import { createSampleJob } from '@/features/demo/sample-job';
 import { currentCompanyId, ensureCompany } from '@/features/jobs/useCompany';
 import { isProfileComplete } from '@/features/settings/company-form';
 import { useSync } from '@/hooks/use-sync';
+import { showDemoTools } from '@/lib/demo-mode';
 import { newId } from '@/lib/id';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -71,7 +71,7 @@ export default function JobListScreen() {
 
   const [loadingSample, setLoadingSample] = useState(false);
 
-  /** Only offered with no backend: a sample job must never sync to a real account. */
+  /** Offered with no backend, or when EXPO_PUBLIC_DEMO_TOOLS=1. It syncs like any job. */
   const loadSample = useCallback(async () => {
     setLoadingSample(true);
     try {
@@ -83,7 +83,7 @@ export default function JobListScreen() {
     }
   }, []);
 
-  const sampleButton = isDemoAi() ? (
+  const sampleButton = showDemoTools() ? (
     <Button
       label={loadingSample ? 'Building the sample…' : 'Load a sample job'}
       variant={jobs.length === 0 ? 'secondary' : 'ghost'}

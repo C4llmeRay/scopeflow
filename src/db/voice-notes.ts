@@ -98,8 +98,9 @@ export async function saveVoiceNote(
   );
 
   // Audio is small and the transcript is blocked behind it, so unlike a photo
-  // original it does not wait for Wi-Fi.
-  await db.uploads.enqueue(
+  // original it does not wait for Wi-Fi. A typed note has no audio at all, and
+  // an upload of nothing would only ever fail.
+  if (input.localUri) await db.uploads.enqueue(
     {
       entity: 'voice_notes',
       entityId: `${input.id}:audio`,

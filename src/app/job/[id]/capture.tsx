@@ -12,6 +12,7 @@
  */
 
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
 import { useLocalSearchParams } from 'expo-router';
@@ -24,6 +25,7 @@ import { openLocalDatabase } from '@/db/client';
 import { capturePhoto, listPhotos } from '@/db/photos';
 import { listRooms, type RoomRecord } from '@/db/rooms';
 import { currentCompanyId } from '@/features/jobs/useCompany';
+import { persistPhoto } from '@/features/photos/storage';
 import { newId } from '@/lib/id';
 import { MIN_TARGET, radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -39,6 +41,7 @@ export default function CaptureScreen() {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [shotCount, setShotCount] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [lastShot, setLastShot] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
   const coords = useRef<{ lat: number; lng: number } | null>(null);
   const c = useTheme();
@@ -86,19 +89,23 @@ export default function CaptureScreen() {
         { compress: THUMB_QUALITY, format: ImageManipulator.SaveFormat.JPEG },
       );
 
+      const id = newId();
+      const stored = await persistPhoto(jobId, id, original.uri, derivative.uri);
+
       const db = await openLocalDatabase();
       await capturePhoto(db, {
-        id: newId(),
+        id,
         companyId: currentCompanyId(),
         jobId,
         roomId: activeRoomId,
-        localUri: original.uri,
-        localThumbUri: derivative.uri,
+        localUri: stored.originalUri,
+        localThumbUri: stored.thumbUri,
         gpsLat: coords.current?.lat ?? null,
         gpsLng: coords.current?.lng ?? null,
       });
 
       setShotCount((n) => n + 1);
+      setLastShot(stored.thumbUri);
     } finally {
       setBusy(false);
     }
@@ -156,6 +163,14 @@ export default function CaptureScreen() {
       </View>
 
       <View style={[styles.bottomBar, { backgroundColor: c.surface, borderTopColor: c.border }]}>
+        {lastShot ? (
+          <Image
+            source={{ uri: lastShot }}
+            style={[styles.lastShot, { borderColor: c.border }]}
+            contentFit="cover"
+            accessibilityLabel="Last photo taken"
+          />
+        ) : null}
         <View style={styles.bottomInfo}>
           <TypeText role="bodyStrong">{activeRoom ? activeRoom.name : 'Untagged'}</TypeText>
           <TypeText role="caption" tone="textFaint">
@@ -200,6 +215,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   bottomInfo: { flex: 1, gap: 2 },
+  lastShot: { width: 48, height: 48, borderRadius: radius.sm, borderWidth: 1 },
   shutter: {
     width: MIN_TARGET + 28,
     height: MIN_TARGET + 28,

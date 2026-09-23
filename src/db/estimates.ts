@@ -405,7 +405,8 @@ export async function markEstimateSent(
       {
         entity: 'estimates',
         entityId: id,
-        op: 'upsert',
+        // Four columns of an existing row: an UPDATE, not an upsert.
+        op: 'patch',
         payload: {
           company_id: estimate.companyId,
           status: 'sent',

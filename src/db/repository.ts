@@ -105,7 +105,7 @@ export async function softDeleteRecord(
       {
         entity,
         entityId: id,
-        op: 'upsert',
+        op: 'patch',
         payload: { company_id: row.company_id, deleted_at: iso(now), updated_at: iso(now) },
       },
       now,
@@ -135,7 +135,7 @@ export async function restoreRecord(
       {
         entity,
         entityId: id,
-        op: 'upsert',
+        op: 'patch',
         payload: { company_id: row.company_id, deleted_at: null, updated_at: iso(now) },
       },
       now,
@@ -173,7 +173,8 @@ export async function patchRecord(
       {
         entity,
         entityId: id,
-        op: 'upsert',
+        // An UPDATE on the server: this payload is a few columns, not a row.
+        op: 'patch',
         payload: {
           company_id: row.company_id,
           ...columns,

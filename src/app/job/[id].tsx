@@ -6,9 +6,10 @@
  * open the camera. Everything else is a tap away from here.
  */
 
+import { Image } from 'expo-image';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Button, Card, Label, QuantityRow, Screen, SyncChip, TypeText } from '@/components/ui';
 import { computeRoom, type RoomQuantities } from '@/core/measure';
@@ -26,8 +27,9 @@ import {
 } from '@/db/jobs';
 import { CloseJobPrompt, JobStatusBar } from '@/features/jobs/JobStatusBar';
 import { listOpenings, toCoreOpenings } from '@/db/openings';
-import { listPhotos } from '@/db/photos';
+import { listPhotos, type PhotoRecord } from '@/db/photos';
 import { listRooms, type RoomRecord } from '@/db/rooms';
+import { usePhotoUri } from '@/features/photos/source';
 import { formatFeetInches } from '@/features/rooms/dimension';
 import { useSync } from '@/hooks/use-sync';
 import { radius, space } from '@/theme/tokens';
@@ -37,9 +39,12 @@ interface RoomView {
   room: RoomRecord;
   quantities: RoomQuantities | null;
   openings: number;
-  photos: number;
+  photos: PhotoRecord[];
   damages: number;
 }
+
+/** How many thumbnails a room card shows before "+N". */
+const STRIP = 4;
 
 export default function JobDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -71,7 +76,7 @@ export default function JobDetailScreen() {
             room,
             openings: openings.length,
             damages: damages.length,
-            photos: photos.filter((p) => p.roomId === room.id).length,
+            photos: photos.filter((p) => p.roomId === room.id),
             quantities: safeQuantities(room, openings),
           });
         }
@@ -209,9 +214,29 @@ export default function JobDetailScreen() {
                   {formatFeetInches(room.lengthIn)} &times; {formatFeetInches(room.widthIn)} &times;{' '}
                   {formatFeetInches(room.heightIn)}
                   {openings > 0 ? ` · ${openings} opening${openings === 1 ? '' : 's'}` : ''}
-                  {photos > 0 ? ` · ${photos} photo${photos === 1 ? '' : 's'}` : ''}
+                  {photos.length > 0
+                    ? ` · ${photos.length} photo${photos.length === 1 ? '' : 's'}`
+                    : ''}
                 </TypeText>
               </View>
+
+              {photos.length > 0 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${photos.length} photos of ${room.name}`}
+                  onPress={() => router.push(`/job/${id}/photos?roomId=${room.id}`)}
+                  style={styles.strip}
+                >
+                  {photos.slice(0, STRIP).map((photo) => (
+                    <StripThumb key={photo.id} photo={photo} />
+                  ))}
+                  {photos.length > STRIP ? (
+                    <View style={[styles.more, { backgroundColor: c.surfaceAlt, borderColor: c.border }]}>
+                      <TypeText role="bodyStrong">+{photos.length - STRIP}</TypeText>
+                    </View>
+                  ) : null}
+                </Pressable>
+              ) : null}
 
               {quantities ? (
                 <>
@@ -273,6 +298,18 @@ export default function JobDetailScreen() {
   );
 }
 
+function StripThumb({ photo }: { photo: PhotoRecord }) {
+  const c = useTheme();
+  const uri = usePhotoUri(photo, 'thumb');
+  return (
+    <Image
+      source={uri ? { uri } : undefined}
+      style={[styles.thumb, { backgroundColor: c.surfaceAlt, borderColor: c.border }]}
+      contentFit="cover"
+    />
+  );
+}
+
 function safeQuantities(
   room: RoomRecord,
   openings: Awaited<ReturnType<typeof listOpenings>>,
@@ -297,6 +334,16 @@ const styles = StyleSheet.create({
   list: { gap: space.md },
   card: { borderWidth: 1, borderRadius: radius.md, padding: space.lg, gap: space.sm },
   cardHeader: { gap: 2 },
+  strip: { flexDirection: 'row', gap: space.xs },
+  thumb: { width: 56, height: 56, borderRadius: radius.sm, borderWidth: 1 },
+  more: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cardActions: { flexDirection: 'row', gap: space.sm, marginTop: space.xs },
   footerRow: { flexDirection: 'row', gap: space.md },
   footerItem: { flex: 1 },

@@ -3,6 +3,7 @@ import * as SQLite from 'expo-sqlite';
 import { SqliteOutboxStore } from '../sync/sqlite-store';
 import { AI_QUEUE_TABLE } from '../features/ai/queue';
 import { UPLOAD_QUEUE_TABLE } from '../sync/uploads';
+import { isDemoAi } from '../lib/demo-mode';
 import { claimDatabase } from './claim';
 import { expoSqliteAdapter } from './expo-adapter';
 import { applyColumnAdditions } from './migrate';
@@ -41,7 +42,9 @@ export function openLocalDatabase(): Promise<LocalDatabase> {
       adapter,
       outbox: await SqliteOutboxStore.create(adapter),
       uploads: await SqliteOutboxStore.create(adapter, UPLOAD_QUEUE_TABLE),
-      ai: await SqliteOutboxStore.create(adapter, AI_QUEUE_TABLE),
+      // With the demo AI there is no model to queue work for; queued photos
+      // would only fail at the server and show up as needing attention.
+      ai: isDemoAi() ? undefined : await SqliteOutboxStore.create(adapter, AI_QUEUE_TABLE),
     };
   })();
   return opened;

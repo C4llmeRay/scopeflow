@@ -67,11 +67,45 @@ export function runOutboxStoreConformance(
       expect(all[1].payload).toEqual({ lengthIn: 144 });
     });
 
-    it('does not merge across different operations on one record', async () => {
+    it('does not merge a write with a purge', async () => {
       const store = await makeStore();
       await store.enqueue({ entity: 'photos', entityId: 'p1', op: 'upsert', payload: { a: 1 } }, 0);
       await store.enqueue({ entity: 'photos', entityId: 'p1', op: 'purge', payload: {} }, 0);
       expect(await store.all()).toHaveLength(2);
+    });
+
+    it('folds a patch into an unsent upsert, which stays an upsert', async () => {
+      const store = await makeStore();
+      await store.enqueue(room('r1', { name: 'Den', lengthIn: 100 }), 0);
+      await store.enqueue({ entity: 'rooms', entityId: 'r1', op: 'patch', payload: { lengthIn: 144 } }, 1);
+
+      const all = await store.all();
+      expect(all).toHaveLength(1);
+      expect(all[0].op).toBe('upsert');
+      expect(all[0].payload).toEqual({ name: 'Den', lengthIn: 144 });
+    });
+
+    it('turns a pending patch into an upsert when a full row follows it', async () => {
+      const store = await makeStore();
+      await store.enqueue({ entity: 'rooms', entityId: 'r1', op: 'patch', payload: { lengthIn: 144 } }, 0);
+      await store.enqueue(room('r1', { name: 'Den', lengthIn: 150 }), 1);
+
+      const all = await store.all();
+      expect(all).toHaveLength(1);
+      expect(all[0].op).toBe('upsert');
+      // The later full row wins, so an old patch can never overwrite it.
+      expect(all[0].payload).toEqual({ name: 'Den', lengthIn: 150 });
+    });
+
+    it('keeps two patches a patch', async () => {
+      const store = await makeStore();
+      await store.enqueue({ entity: 'rooms', entityId: 'r1', op: 'patch', payload: { a: 1 } }, 0);
+      await store.enqueue({ entity: 'rooms', entityId: 'r1', op: 'patch', payload: { b: 2 } }, 1);
+
+      const all = await store.all();
+      expect(all).toHaveLength(1);
+      expect(all[0].op).toBe('patch');
+      expect(all[0].payload).toEqual({ a: 1, b: 2 });
     });
   });
 

@@ -5,11 +5,13 @@
  * SQLite store has to match. When the two disagree, this one is right.
  */
 
-import type {
-  NewOutboxEntry,
-  OutboxCounts,
-  OutboxEntry,
-  OutboxStore,
+import {
+  isWrite,
+  mergedOp,
+  type NewOutboxEntry,
+  type OutboxCounts,
+  type OutboxEntry,
+  type OutboxStore,
 } from './types';
 
 export class MemoryOutboxStore implements OutboxStore {
@@ -25,10 +27,11 @@ export class MemoryOutboxStore implements OutboxStore {
         e.state === 'pending' &&
         e.entity === entry.entity &&
         e.entityId === entry.entityId &&
-        e.op === entry.op,
+        (e.op === entry.op || (isWrite(e.op) && isWrite(entry.op))),
     );
 
     if (existing) {
+      existing.op = mergedOp(existing.op, entry.op);
       existing.payload = { ...existing.payload, ...entry.payload };
       existing.revision += 1;
       existing.updatedAt = now;

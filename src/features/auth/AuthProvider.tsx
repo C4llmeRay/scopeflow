@@ -62,19 +62,45 @@ export function useAuth(): AuthValue {
  * the company and the profile in one transaction — it exists because of a
  * chicken-and-egg problem: RLS keys on company_id and a brand new user has none.
  */
-async function resolveCompany(): Promise<string> {
-  const supabase = getSupabase();
-
-  const { data: profile } = await supabase
+async function readProfileCompany(): Promise<string | null> {
+  const { data: profile } = await getSupabase()
     .from('profiles')
     .select('company_id')
     .maybeSingle();
+  return (profile?.company_id as string | undefined) ?? null;
+}
 
-  if (profile?.company_id) return profile.company_id as string;
+async function lookUpOrCreateCompany(): Promise<string> {
+  const existing = await readProfileCompany();
+  if (existing) return existing;
 
-  const { data, error } = await supabase.rpc('bootstrap_company', { p_name: '' });
-  if (error) throw error;
-  return data as string;
+  const { data, error } = await getSupabase().rpc('bootstrap_company', { p_name: '' });
+  if (!error) return data as string;
+
+  // Someone else created it first — another device signing in at the same
+  // moment. The company exists now, so read it rather than fail the sign-in.
+  const raced = await readProfileCompany();
+  if (raced) return raced;
+  throw error;
+}
+
+/**
+ * One lookup per user at a time. Sign-in reaches adopt() twice at once — from
+ * the stored session and from the SIGNED_IN event — and two concurrent
+ * bootstrap calls for a new user used to fail the second one.
+ */
+let inFlight: { userId: string; company: Promise<string> } | null = null;
+
+function resolveCompany(userId: string): Promise<string> {
+  if (inFlight?.userId !== userId) {
+    const company = lookUpOrCreateCompany();
+    inFlight = { userId, company };
+    // A failure must not stick: the next attempt, with signal, should retry.
+    company.catch(() => {
+      if (inFlight?.company === company) inFlight = null;
+    });
+  }
+  return inFlight.company;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -84,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /** Everything that has to happen once a session exists. */
   const adopt = useCallback(async (session: Session) => {
-    const resolved = await resolveCompany();
+    const resolved = await resolveCompany(session.user.id);
 
     // Anything recorded before signing in moves under the real company —
     // rows, the profile, and the tenant inside queued pushes.

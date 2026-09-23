@@ -6,14 +6,16 @@
  */
 
 import type { SqliteAdapter } from '../db/sqlite-adapter';
-import type {
-  NewOutboxEntry,
-  OutboxCounts,
-  OutboxEntry,
-  OutboxState,
-  OutboxStore,
-  SyncEntity,
-  SyncOp,
+import {
+  isWrite,
+  mergedOp,
+  type NewOutboxEntry,
+  type OutboxCounts,
+  type OutboxEntry,
+  type OutboxState,
+  type OutboxStore,
+  type SyncEntity,
+  type SyncOp,
 } from './types';
 
 export const DEFAULT_OUTBOX_TABLE = 'sync_outbox';
@@ -99,20 +101,24 @@ export class SqliteOutboxStore implements OutboxStore {
   async enqueue(entry: NewOutboxEntry, now: number): Promise<void> {
     // Coalesce into a pending entry for the same record, so holding a key down
     // in a dimension field produces one push rather than forty.
+    // An upsert and a patch for the same record are both writes, so they merge.
+    const ops = isWrite(entry.op) ? ['upsert', 'patch'] : [entry.op];
     const [existing] = await this.db.all<OutboxRow>(
       `select * from ${this.table}
-        where entity = ? and entity_id = ? and op = ? and state = 'pending'
+        where entity = ? and entity_id = ? and op in (${ops.map(() => '?').join(', ')})
+          and state = 'pending'
         order by seq limit 1`,
-      [entry.entity, entry.entityId, entry.op],
+      [entry.entity, entry.entityId, ...ops],
     );
 
     if (existing) {
       const merged = { ...(JSON.parse(existing.payload) as object), ...entry.payload };
+      const op = isWrite(entry.op) ? mergedOp(existing.op as SyncOp, entry.op) : entry.op;
       await this.db.run(
         `update ${this.table}
-            set payload = ?, revision = revision + 1, updated_at = ?
+            set payload = ?, op = ?, revision = revision + 1, updated_at = ?
           where seq = ?`,
-        [JSON.stringify(merged), now, existing.seq],
+        [JSON.stringify(merged), op, now, existing.seq],
       );
       return;
     }

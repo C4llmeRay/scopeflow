@@ -81,7 +81,7 @@ describe('the sample job', () => {
 
     const photos = await listPhotos(db, jobId);
     expect(photos.filter((p) => p.roomId === null)).toHaveLength(1);
-    expect(photos.every((p) => p.localUri?.startsWith('data:image/svg+xml'))).toBe(true);
+    expect(photos.every((p) => p.localUri?.startsWith('data:image/jpeg'))).toBe(true);
 
     const notes = await listVoiceNotes(db, jobId);
     expect(notes).toHaveLength(3);
