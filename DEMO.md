@@ -4,18 +4,13 @@ Three ways to show it. All run with **no backend and no `.env` keys** — the ap
 works locally, and the AI steps are answered by on-device demo rules that are
 labelled as such on screen.
 
-## Option 0 — the hosted link
+## Option 0 — host it yourself
 
-https://claude.ai/artifact/Rk5YByeqzhuKuAtkfVwRA6 — the web demo, hosted as a
-claude.ai artifact. Private until shared from its **Share** menu. Every visit
-starts fresh (the database lives in memory), so a reload resets the demo.
-Inside that page, *Send the estimate* shows the document in an overlay rather
-than a new tab, and the camera and microphone are unavailable (notes fall back
-to typing).
-
-To rebuild it after a change: `npm run export:portable`, then republish the
-contents of `dist-portable/`. That build is patched for hosting (relative
-paths, in-memory database) and is not what `npm run serve:web` serves.
+`npm run export:portable` builds `dist-portable/`: a static folder that runs
+from any host and any subfolder (Netlify, Vercel, GitHub Pages, S3). Upload the
+folder's contents; no special headers are needed. Every visit starts fresh (the
+database lives in memory), so a reload resets the demo. Where the page cannot
+open a new tab, *Send the estimate* shows the document in an overlay.
 
 ## Option A — in a browser (easiest, screen-share friendly)
 
