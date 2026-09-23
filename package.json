@@ -61,7 +61,8 @@
     "typecheck": "tsc --noEmit",
     "preview:docs": "tsx scripts/preview-documents.ts",
     "demo:web": "expo export --platform web && node scripts/serve-web.mjs",
-    "serve:web": "node scripts/serve-web.mjs"
+    "serve:web": "node scripts/serve-web.mjs",
+    "export:portable": "node scripts/export-portable.mjs"
   },
   "private": true
 }

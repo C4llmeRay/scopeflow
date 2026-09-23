@@ -16,7 +16,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Button, Chip, Screen, TypeText } from '@/components/ui';
 import { goBack } from '@/lib/navigation';
@@ -114,6 +114,13 @@ export default function CaptureScreen() {
           ScopeFlow needs the camera to document damage. Photos stay on this
           phone until there is signal.
         </TypeText>
+        {Platform.OS === 'web' ? (
+          <TypeText role="caption" tone="textFaint">
+            If this browser or page does not offer the camera, nothing is wrong
+            with the job — photos are taken in the phone app.
+          </TypeText>
+        ) : null}
+        <Button label="Back to the job" variant="ghost" onPress={() => goBack()} />
       </Screen>
     );
   }

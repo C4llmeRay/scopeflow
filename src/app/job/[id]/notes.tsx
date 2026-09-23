@@ -197,32 +197,14 @@ export default function VoiceNotesScreen() {
     [refresh],
   );
 
-  if (permission === false) {
-    return (
-      <Screen
-        footer={
-          <Button
-            label="Allow microphone"
-            onPress={() =>
-              void speech?.requestPermissionsAsync().then((r) => setPermission(r.granted))
-            }
-          />
-        }
-      >
-        <TypeText role="title">Microphone access</TypeText>
-        <TypeText role="body" tone="textMuted">
-          ScopeFlow listens while you describe damage, so you do not have to type
-          it later. The words are worked out on this phone — nothing is sent
-          anywhere to be transcribed.
-        </TypeText>
-      </Screen>
-    );
-  }
+  // Typing is the fallback wherever speaking is not possible: no recogniser in
+  // this build, or the microphone was refused.
+  const canSpeak = speech !== null && permission !== false;
 
   return (
     <Screen
       footer={
-        !speech ? (
+        !canSpeak ? (
           <Button label="Type a note" onPress={() => void typeNote()} />
         ) : (
         <View style={styles.recordRow}>
@@ -281,6 +263,18 @@ export default function VoiceNotesScreen() {
             Speaking a note needs the ScopeFlow app build — this one (Expo Go, or
             a browser) has no on-device recogniser. Typed notes work the same way.
           </TypeText>
+        </Card>
+      ) : permission === false ? (
+        <Card>
+          <TypeText role="caption" tone="textMuted">
+            ScopeFlow listens while you describe damage, and the words are worked
+            out on this device. Without the microphone, type the note instead.
+          </TypeText>
+          <Button
+            label="Allow microphone"
+            variant="secondary"
+            onPress={() => void speech?.requestPermissionsAsync().then((r) => setPermission(r.granted))}
+          />
         </Card>
       ) : null}
 
