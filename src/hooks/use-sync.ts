@@ -98,9 +98,10 @@ export function useSync(intervalMs = 15_000): SyncStatus & { syncNow: () => void
     }
 
     // With no backend configured the app still works end to end — writes land
-    // on the phone and queue up. The chip just reports them as unsent.
+    // on the phone and queue up. There is nowhere for them to go, so a count
+    // would only read as a backlog; the chip just says the work is saved.
     if (!isSupabaseConfigured()) {
-      await readCounts(false);
+      setStatus({ pending: 0, uploading: 0, thinking: 0, failed: 0, online: false, draining: false });
       return;
     }
 

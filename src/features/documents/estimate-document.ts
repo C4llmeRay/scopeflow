@@ -182,7 +182,7 @@ export function renderEstimateDocument(input: EstimateDocumentInput): string {
     <div class="company">${esc(company.name)}</div>
     <div class="small muted">${esc(companyAddress(company))}</div>
     <div class="small muted">${esc(joinParts([company.phone, company.email]))}</div>
-    ${company.licenseNo ? `<div class="small muted">Licence ${esc(company.licenseNo)}</div>` : ''}
+    ${company.licenseNo ? `<div class="small muted">License ${esc(company.licenseNo)}</div>` : ''}
   </div>
   <div class="right">
     <h1>Estimate</h1>

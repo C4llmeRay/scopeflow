@@ -115,7 +115,7 @@ describe('deriveCompanyForm — warnings', () => {
       form({ licenseNo: '', addressLine1: '', estimateTerms: '' }),
     );
     expect(state.warnings).toHaveLength(3);
-    expect(state.warnings.some((w) => /licence/i.test(w))).toBe(true);
+    expect(state.warnings.some((w) => /license/i.test(w))).toBe(true);
     expect(state.warnings.some((w) => /address/i.test(w))).toBe(true);
     expect(state.warnings.some((w) => /supplement/i.test(w))).toBe(true);
   });

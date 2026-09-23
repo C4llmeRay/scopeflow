@@ -14,11 +14,12 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Button, Chip, Screen, TypeText } from '@/components/ui';
+import { goBack } from '@/lib/navigation';
 import { openLocalDatabase } from '@/db/client';
 import { capturePhoto, listPhotos } from '@/db/photos';
 import { listRooms, type RoomRecord } from '@/db/rooms';
@@ -169,7 +170,7 @@ export default function CaptureScreen() {
         </Pressable>
 
         <View style={styles.bottomInfo}>
-          <Button label="Done" variant="ghost" onPress={() => router.back()} />
+          <Button label="Done" variant="ghost" onPress={() => goBack()} />
         </View>
       </View>
     </View>

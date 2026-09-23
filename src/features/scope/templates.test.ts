@@ -113,6 +113,13 @@ describe('buildScope — only what got wet', () => {
     expect(result).toContain('DRY-HTF');
   });
 
+  it('extracts a hard floor as a hard floor, not as carpet', () => {
+    const result = codes(scope({ materials: ['Vinyl plank'] }));
+    expect(result).toContain('WTR-EXT-H');
+    expect(result).not.toContain('WTR-EXT');
+    expect(qtyOf(scope({ materials: ['Laminate'] }), 'WTR-EXT-H')).toBe(bedroom.floorSf);
+  });
+
   it('skips baseboard when it was not named', () => {
     expect(codes(scope({ materials: ['Carpet'] }))).not.toContain('BAS-RR');
   });

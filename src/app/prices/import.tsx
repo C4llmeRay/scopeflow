@@ -10,11 +10,11 @@
 
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
-import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Button, Card, Label, Screen, TypeText } from '@/components/ui';
+import { goBack } from '@/lib/navigation';
 import { formatUsd } from '@/core/units';
 import { openLocalDatabase } from '@/db/client';
 import { applyPriceImport } from '@/db/price-items';
@@ -61,7 +61,7 @@ export default function PriceImportScreen() {
     try {
       const db = await openLocalDatabase();
       await applyPriceImport(db, currentCompanyId(), result.items, newId);
-      router.back();
+      goBack();
     } finally {
       setBusy(false);
     }

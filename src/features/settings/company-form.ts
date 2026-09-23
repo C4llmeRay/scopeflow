@@ -118,7 +118,7 @@ export function deriveCompanyForm(values: CompanyFormValues): CompanyFormState {
     warnings.push('No phone or email — an adjuster has no way to reply to your estimate.');
   }
   if (!values.licenseNo.trim()) {
-    warnings.push('No licence number. Most carriers expect one on an estimate.');
+    warnings.push('No license number. Most carriers expect one on an estimate.');
   }
   if (!values.addressLine1.trim()) {
     warnings.push('No business address on the letterhead.');

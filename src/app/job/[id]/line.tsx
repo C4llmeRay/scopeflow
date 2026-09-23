@@ -7,11 +7,12 @@
  * through the same calculator as the estimate so the two can never disagree.
  */
 
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button, Card, DimensionField, InlineField, Label, Screen, TypeText } from '@/components/ui';
+import { goBack } from '@/lib/navigation';
 import { computeRoom } from '@/core/measure';
 import { formatUsd } from '@/core/units';
 import { openLocalDatabase } from '@/db/client';
@@ -101,14 +102,14 @@ export default function LineEditorScreen() {
       materialUnitCents: state.materialUnitCents,
       laborUnitCents: state.laborUnitCents,
     });
-    router.back();
+    goBack();
   }, [line, state]);
 
   const remove = useCallback(async () => {
     if (!line) return;
     const db = await openLocalDatabase();
     await softDeleteLineItem(db, line.id);
-    router.back();
+    goBack();
   }, [line]);
 
   if (!line || !values || !state) return null;
@@ -124,7 +125,7 @@ export default function LineEditorScreen() {
             disabled={!state.canSave}
           />
           <Button label="Remove from scope" variant="danger" onPress={() => void remove()} />
-          <Button label="Cancel" variant="ghost" onPress={() => router.back()} />
+          <Button label="Cancel" variant="ghost" onPress={() => goBack()} />
         </>
       }
     >

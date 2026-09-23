@@ -114,7 +114,7 @@ export const DEFAULT_ESTIMATE_TERMS =
   'This estimate covers the damage visible and accessible at the time of ' +
   'inspection. Concealed damage found during demolition may require a ' +
   'supplement. Prices are valid for 30 days. Work begins on written ' +
-  'authorisation.';
+  'authorization.';
 
 export async function saveCompany(
   db: LocalDatabase,

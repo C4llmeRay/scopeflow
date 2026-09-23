@@ -43,6 +43,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.2",
     "typescript": "~6.0.3",
     "vitest": "^5.0.1"
   },
@@ -57,7 +59,9 @@
     "test:watch": "vitest",
     "db:verify": "bash scripts/verify-schema.sh",
     "typecheck": "tsc --noEmit",
-    "preview:docs": "tsx scripts/preview-documents.ts"
+    "preview:docs": "tsx scripts/preview-documents.ts",
+    "demo:web": "expo export --platform web && node scripts/serve-web.mjs",
+    "serve:web": "node scripts/serve-web.mjs"
   },
   "private": true
 }

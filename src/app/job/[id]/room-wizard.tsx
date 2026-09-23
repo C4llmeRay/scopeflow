@@ -1,7 +1,8 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 
 import { openLocalDatabase } from '@/db/client';
+import { goBack } from '@/lib/navigation';
 import { listOpenings, saveOpening, softDeleteOpening } from '@/db/openings';
 import { getRoom, listRooms, saveRoom } from '@/db/rooms';
 import { currentCompanyId } from '@/features/jobs/useCompany';
@@ -106,7 +107,7 @@ export default function RoomWizardRoute() {
         });
       }
 
-      router.back();
+      goBack();
       // Opportunistic: if there is signal it goes now, otherwise it waits.
       sync.syncNow();
     },
@@ -119,7 +120,7 @@ export default function RoomWizardRoute() {
     <RoomWizard
       initialValues={initial}
       onSave={(values) => void handleSave(values)}
-      onCancel={() => router.back()}
+      onCancel={() => goBack()}
       sync={{
         pending: sync.pending,
         uploading: sync.uploading,

@@ -16,10 +16,6 @@
  * transcript is a convenience.
  */
 
-import {
-  ExpoSpeechRecognitionModule,
-  useSpeechRecognitionEvent,
-} from 'expo-speech-recognition';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -37,6 +33,7 @@ import {
 import { queueVoiceExtraction } from '@/features/ai/queue';
 import { currentCompanyId } from '@/features/jobs/useCompany';
 import { formatClockTime, formatDuration } from '@/features/notes/duration';
+import { speech, useSpeechEvent } from '@/features/notes/speech';
 import { useSync } from '@/hooks/use-sync';
 import { newId } from '@/lib/id';
 import { MIN_TARGET, radius, space, type } from '@/theme/tokens';
@@ -77,24 +74,25 @@ export default function VoiceNotesScreen() {
   }, [refresh]);
 
   useEffect(() => {
+    if (!speech) return;
     void (async () => {
-      const granted = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      const granted = await speech.requestPermissionsAsync();
       setPermission(granted.granted);
     })();
   }, []);
 
-  useSpeechRecognitionEvent('result', (event) => {
+  useSpeechEvent('result', (event) => {
     const text = event.results[0]?.transcript ?? '';
     setLive(text);
     // Only a final result is worth keeping; interim ones churn word by word.
     if (event.isFinal && text.trim()) finalText.current = text;
   });
 
-  useSpeechRecognitionEvent('audioend', (event) => {
+  useSpeechEvent('audioend', (event) => {
     audioUri.current = event.uri ?? null;
   });
 
-  useSpeechRecognitionEvent('error', (event) => {
+  useSpeechEvent('error', (event) => {
     setRecording(false);
     // "no-speech" is somebody tapping the button and thinking better of it.
     if (event.error !== 'no-speech' && event.error !== 'aborted') {
@@ -133,7 +131,7 @@ export default function VoiceNotesScreen() {
     sync.syncNow();
   }, [activeRoomId, jobId, live, refresh, sync]);
 
-  useSpeechRecognitionEvent('end', () => {
+  useSpeechEvent('end', () => {
     setRecording(false);
     void save();
   });
@@ -146,7 +144,7 @@ export default function VoiceNotesScreen() {
     setLive('');
     setRecording(true);
 
-    ExpoSpeechRecognitionModule.start({
+    speech?.start({
       lang: 'en-US',
       // Partial results are what make the words appear as they are spoken.
       interimResults: true,
@@ -157,7 +155,7 @@ export default function VoiceNotesScreen() {
   }, []);
 
   const stop = useCallback(() => {
-    ExpoSpeechRecognitionModule.stop();
+    speech?.stop();
   }, []);
 
   const saveEdit = useCallback(async () => {
@@ -173,6 +171,22 @@ export default function VoiceNotesScreen() {
     await refresh();
     sync.syncNow();
   }, [editing, jobId, refresh, sync]);
+
+  /** Without a recogniser, a note is typed rather than spoken. */
+  const typeNote = useCallback(async () => {
+    const db = await openLocalDatabase();
+    const id = newId();
+    await saveVoiceNote(db, {
+      id,
+      companyId: currentCompanyId(),
+      jobId,
+      roomId: activeRoomId,
+      localUri: '',
+      durationMs: null,
+    });
+    await refresh();
+    setEditing({ id, text: '' });
+  }, [activeRoomId, jobId, refresh]);
 
   const remove = useCallback(
     async (id: string) => {
@@ -190,9 +204,7 @@ export default function VoiceNotesScreen() {
           <Button
             label="Allow microphone"
             onPress={() =>
-              void ExpoSpeechRecognitionModule.requestPermissionsAsync().then((r) =>
-                setPermission(r.granted),
-              )
+              void speech?.requestPermissionsAsync().then((r) => setPermission(r.granted))
             }
           />
         }
@@ -210,6 +222,9 @@ export default function VoiceNotesScreen() {
   return (
     <Screen
       footer={
+        !speech ? (
+          <Button label="Type a note" onPress={() => void typeNote()} />
+        ) : (
         <View style={styles.recordRow}>
           <View style={styles.recordInfo}>
             <TypeText role="bodyStrong">
@@ -242,6 +257,7 @@ export default function VoiceNotesScreen() {
             />
           </Pressable>
         </View>
+        )
       }
     >
       <SyncChip
@@ -258,6 +274,15 @@ export default function VoiceNotesScreen() {
           {notes.length} on this job
         </TypeText>
       </View>
+
+      {!speech ? (
+        <Card>
+          <TypeText role="caption" tone="textMuted">
+            Speaking a note needs the ScopeFlow app build — this one (Expo Go, or
+            a browser) has no on-device recogniser. Typed notes work the same way.
+          </TypeText>
+        </Card>
+      ) : null}
 
       {problem ? (
         <Card>

@@ -3,6 +3,7 @@ import * as SQLite from 'expo-sqlite';
 import { SqliteOutboxStore } from '../sync/sqlite-store';
 import { AI_QUEUE_TABLE } from '../features/ai/queue';
 import { UPLOAD_QUEUE_TABLE } from '../sync/uploads';
+import { claimDatabase } from './claim';
 import { expoSqliteAdapter } from './expo-adapter';
 import { applyColumnAdditions } from './migrate';
 import { APP_SCHEMA } from './schema';
@@ -20,6 +21,8 @@ let opened: Promise<LocalDatabase> | null = null;
  */
 export function openLocalDatabase(): Promise<LocalDatabase> {
   opened ??= (async () => {
+    // On web, waits for this tab's turn at the files. Instant on a phone.
+    await claimDatabase();
     const db = await SQLite.openDatabaseAsync(DATABASE_NAME);
     const adapter = expoSqliteAdapter(db);
     await adapter.exec(APP_SCHEMA);

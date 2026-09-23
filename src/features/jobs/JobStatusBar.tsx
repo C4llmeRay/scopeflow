@@ -70,7 +70,11 @@ export function JobStatusBar({ status, onChange, busy }: JobStatusBarProps) {
           {moves.map((next) => (
             <Chip
               key={next}
-              label={MOVE_LABELS[next] ?? JOB_STATUS_LABELS[next]}
+              label={
+                status === 'inspecting' && next === 'estimating'
+                  ? 'Start estimating'
+                  : (MOVE_LABELS[next] ?? JOB_STATUS_LABELS[next])
+              }
               onPress={() => {
                 if (!busy) onChange(next);
               }}
