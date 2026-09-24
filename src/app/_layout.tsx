@@ -32,7 +32,10 @@ function Guarded({ children }: { children: React.ReactNode }) {
     if (phase !== 'signed-out' && onSignIn) router.replace('/');
   }, [onSignIn, phase, router]);
 
-  if (phase === 'loading') {
+  // Signed out and not yet on the sign-in screen: render nothing until the
+  // redirect lands. Otherwise the job list mounts for one frame and asks for a
+  // company nobody has.
+  if (phase === 'loading' || (phase === 'signed-out' && !onSignIn)) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator />
