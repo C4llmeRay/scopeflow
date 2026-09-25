@@ -17,6 +17,7 @@ import {
   saveJob,
   setJobStatus,
   softDeleteJob,
+  updateJobDetails,
   type JobStatus,
 } from './jobs';
 import { listOpenings, saveOpening, softDeleteOpening, toCoreOpenings } from './openings';
@@ -460,5 +461,38 @@ describe('damages', () => {
 
     expect(await listDamages(db, 'r1')).toHaveLength(0);
     expect(await deepestWaterLineIn(db, 'r1')).toBeNull();
+  });
+});
+
+describe('updateJobDetails', () => {
+  it('edits the address and claim without resetting status or rates', async () => {
+    const db = await makeDb();
+    await saveJob(db, { id: 'j1', companyId: 'co-1', status: 'estimating', opPct: 15 }, 1_000);
+
+    const updated = await updateJobDetails(
+      db,
+      'j1',
+      {
+        propertyAddress1: ' 1418 Maple Avenue ',
+        propertyCity: 'Columbus',
+        propertyState: 'OH',
+        propertyPostal: '',
+        claimNo: 'CLM-1',
+        carrier: null,
+        homeownerName: 'Jordan Ellis',
+        homeownerPhone: null,
+        dateOfLoss: null,
+      },
+      2_000,
+    );
+
+    expect(updated).toMatchObject({
+      propertyAddress1: '1418 Maple Avenue',
+      propertyPostal: null,
+      claimNo: 'CLM-1',
+      status: 'estimating',
+      opPct: 15,
+    });
+    expect(jobTitle(updated!)).toBe('1418 Maple Avenue');
   });
 });

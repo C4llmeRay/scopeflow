@@ -1,13 +1,19 @@
 # ScopeFlow
 
-Turn a property inspection into a repair estimate, from a phone, in a basement,
-with no signal.
+**Photos for Xactimate, named and described before you leave the property.**
 
-A contractor walks the damage, measures rooms, shoots photos and talks into the
-phone. ScopeFlow works out the quantities, drafts the scope, prices it against
-their own price list, and produces an estimate and photo report to send to the
-homeowner or the carrier — then tracks the job from inspection through
-completion.
+ScopeFlow does not replace Xactimate — it removes the slowest part of feeding
+it. A contractor shoots the loss with two taps per photo (the room, and what it
+shows), so every photo is named as it is taken: "Kitchen - Water line". They
+add the description on the phone, typed or dictated through the keyboard's
+microphone, one photo at a time. At the desk, **Export for Xactimate**
+downloads a ZIP: the photos numbered in photo-sheet order and named by their
+titles, plus a photo list of every name and description to copy into
+Xactimate's fields.
+
+The estimating features this project started with — measured rooms, damage
+sheets, pricing, estimates — are still in the code, switched off. Set
+`EXPO_PUBLIC_ESTIMATING=1` to bring them back.
 
 **Status: MVP, not yet run on a physical device.** Everything below is built and
 tested, but it has never been pointed at a real Supabase project, a real phone,
@@ -50,7 +56,7 @@ Supabase exists.
 |---|---|
 | `npm start` | Expo dev server |
 | `npm run android` / `ios` | Dev server, opening that platform |
-| `npm test` | Vitest — 740 tests |
+| `npm test` | Vitest — 762 tests |
 | `npm run test:watch` | Same, watching |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run db:verify` | Runs every migration against real Postgres in Docker, then the RLS smoke suite |
@@ -191,7 +197,7 @@ src/
     damage/ notes/ scope/ onboarding/ settings/
   theme/        tokens, thumb-reachable target sizes
 supabase/
-  migrations/   11 migrations
+  migrations/   12 migrations
   functions/    ai, billing, billing-return, stripe-webhook (Deno)
   functions/_shared/  pure logic the app's own test suite imports directly
   test/         RLS + storage + billing smoke suite
@@ -215,7 +221,7 @@ supabase functions deploy ai
 npm run db:verify          # or check it against plain Postgres in Docker
 ```
 
-Eleven migrations. **RLS is on for every table**, and the smoke suite asserts
+Twelve migrations. **RLS is on for every table**, and the smoke suite asserts
 that, along with cross-tenant refusal, storage isolation, share-link revocation,
 the AI meter being unwritable by the party it meters, and billing state being
 writable only by the Stripe webhook.

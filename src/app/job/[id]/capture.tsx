@@ -25,6 +25,7 @@ import { openLocalDatabase } from '@/db/client';
 import { capturePhoto, listPhotos } from '@/db/photos';
 import { listRooms, type RoomRecord } from '@/db/rooms';
 import { currentCompanyId } from '@/features/jobs/useCompany';
+import { composeTitle, PHOTO_SUBJECTS } from '@/features/photos/labels';
 import { persistPhoto } from '@/features/photos/storage';
 import { newId } from '@/lib/id';
 import { MIN_TARGET, radius, space } from '@/theme/tokens';
@@ -42,6 +43,9 @@ export default function CaptureScreen() {
   const [shotCount, setShotCount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [lastShot, setLastShot] = useState<string | null>(null);
+  // What the next frame shows. Sticky, like the room: consecutive shots are
+  // usually of the same thing from different angles.
+  const [subject, setSubject] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
   const coords = useRef<{ lat: number; lng: number } | null>(null);
   const c = useTheme();
@@ -98,6 +102,8 @@ export default function CaptureScreen() {
         companyId: currentCompanyId(),
         jobId,
         roomId: activeRoomId,
+        // Named as it is taken, from the two chips. The description comes later.
+        title: composeTitle(rooms.find((r) => r.id === activeRoomId)?.name ?? null, subject),
         localUri: stored.originalUri,
         localThumbUri: stored.thumbUri,
         gpsLat: coords.current?.lat ?? null,
@@ -109,7 +115,7 @@ export default function CaptureScreen() {
     } finally {
       setBusy(false);
     }
-  }, [activeRoomId, busy, jobId]);
+  }, [activeRoomId, busy, jobId, rooms, subject]);
 
   if (!permission) return null;
 
@@ -147,7 +153,7 @@ export default function CaptureScreen() {
           contentContainerStyle={styles.chipRow}
         >
           <Chip
-            label="Untagged"
+            label="No room"
             selected={activeRoomId === null}
             onPress={() => setActiveRoomId(null)}
           />
@@ -157,6 +163,21 @@ export default function CaptureScreen() {
               label={room.name}
               selected={room.id === activeRoomId}
               onPress={() => setActiveRoomId(room.id)}
+            />
+          ))}
+        </ScrollView>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}
+        >
+          {PHOTO_SUBJECTS.map(({ label }) => (
+            <Chip
+              key={label}
+              label={label}
+              selected={subject === label}
+              // Tapping the selected one again clears it.
+              onPress={() => setSubject((current) => (current === label ? null : label))}
             />
           ))}
         </ScrollView>
@@ -172,7 +193,9 @@ export default function CaptureScreen() {
           />
         ) : null}
         <View style={styles.bottomInfo}>
-          <TypeText role="bodyStrong">{activeRoom ? activeRoom.name : 'Untagged'}</TypeText>
+          <TypeText role="bodyStrong" numberOfLines={1}>
+            {composeTitle(activeRoom?.name ?? null, subject) ?? 'No name yet'}
+          </TypeText>
           <TypeText role="caption" tone="textFaint">
             {shotCount} {shotCount === 1 ? 'photo' : 'photos'} on this job
           </TypeText>
@@ -202,7 +225,7 @@ export default function CaptureScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   camera: { flex: 1 },
-  topBar: { position: 'absolute', top: space.lg, left: 0, right: 0 },
+  topBar: { position: 'absolute', top: space.lg, left: 0, right: 0, gap: space.sm },
   chipRow: { flexDirection: 'row', gap: space.sm, paddingHorizontal: space.lg },
   bottomBar: {
     flexDirection: 'row',

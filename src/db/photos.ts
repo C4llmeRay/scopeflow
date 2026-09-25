@@ -34,6 +34,9 @@ export interface PhotoRecord {
   takenAt: number | null;
   gpsLat: number | null;
   gpsLng: number | null;
+  /** The photo's name in Xactimate, e.g. "Kitchen - Water line". */
+  title: string | null;
+  /** Its description in Xactimate. */
   caption: string | null;
   aiLabels: Record<string, unknown>;
   uploadState: UploadState;
@@ -55,6 +58,7 @@ export interface CapturePhotoInput {
   takenAt?: number | null;
   gpsLat?: number | null;
   gpsLng?: number | null;
+  title?: string | null;
   caption?: string | null;
 }
 
@@ -70,6 +74,7 @@ interface PhotoRow {
   taken_at: number | null;
   gps_lat: number | null;
   gps_lng: number | null;
+  title: string | null;
   caption: string | null;
   ai_labels: string;
   upload_state: string;
@@ -92,6 +97,7 @@ function toRecord(row: PhotoRow): PhotoRecord {
     takenAt: row.taken_at,
     gpsLat: row.gps_lat,
     gpsLng: row.gps_lng,
+    title: row.title ?? null,
     caption: row.caption,
     aiLabels: JSON.parse(row.ai_labels) as Record<string, unknown>,
     uploadState: row.upload_state as UploadState,
@@ -139,6 +145,7 @@ export async function capturePhoto(
         taken_at: takenAt,
         gps_lat: input.gpsLat ?? null,
         gps_lng: input.gpsLng ?? null,
+        title: input.title ?? null,
         caption: input.caption ?? null,
         ai_labels: '{}',
         upload_state: 'pending',
@@ -284,6 +291,32 @@ export async function setPhotoCaption(
   now: number = Date.now(),
 ): Promise<void> {
   await patchRecord(db, 'photos', photoId, { caption }, now);
+}
+
+export interface PhotoLabel {
+  roomId: string | null;
+  title: string | null;
+  caption: string | null;
+}
+
+/**
+ * Everything the labelling screen edits, in one write: which room, the name,
+ * and the description. One patch rather than three keeps the outbox to a
+ * single entry per photo however many times it is edited.
+ */
+export async function labelPhoto(
+  db: LocalDatabase,
+  photoId: string,
+  label: PhotoLabel,
+  now: number = Date.now(),
+): Promise<void> {
+  await patchRecord(
+    db,
+    'photos',
+    photoId,
+    { room_id: label.roomId, title: label.title, caption: label.caption },
+    now,
+  );
 }
 
 export async function softDeletePhoto(

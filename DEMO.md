@@ -79,7 +79,33 @@ only on Wi-Fi, so "N photos uploading" on mobile data is expected.
 The Edge Functions (`ai`, `billing`, …) are not needed for this: the demo AI
 runs on the phone, and billing needs Stripe. See the README when you want them.
 
-## A five-minute script
+## A five-minute script — photos for Xactimate
+
+The pitch: *ScopeFlow doesn't replace Xactimate. It kills the hour you spend
+at the desk naming and describing sixty photos.*
+
+1. **New job.** Type the address and claim number — the address names the
+   export. Everything else is optional.
+2. **Add rooms.** Tap *Kitchen*, *Family Room*, *Exterior*… two seconds each.
+3. **Camera.** Pick a room at the top and what the photo shows (*Water line*,
+   *Drywall*, *Source of loss*…). Shoot. The bar at the bottom shows the name
+   the photo gets — "Kitchen - Water line" — and a thumbnail of the last shot.
+   Both choices stay selected, so ten shots of the same wall are ten taps.
+4. **Label.** One photo at a time: the name is already there. Tap a starter
+   ("Water line visible on the wall at approx."), then dictate the rest with the
+   keyboard's microphone. *Save and next.* That's the whole job.
+5. **Export.** On the phone, *Share ZIP* sends it to the computer. At the desk,
+   ScopeFlow in the browser → *Export for Xactimate* → pick the job →
+   *Download ZIP*: full-size photos named `001 Front of risk.jpg`,
+   `002 Kitchen - Water line.jpg`…, and a photo list. The desktop list has
+   *Copy name* / *Copy description* buttons for pasting into Xactimate.
+
+To demo without shooting anything: **Load a sample job** — six photos, four
+already labelled, two left to label live.
+
+## Estimating (EXPO_PUBLIC_ESTIMATING=1)
+
+The original script, for when the estimating features are switched on.
 
 1. **Jobs → Load a sample job.** One tap builds a walked water loss at
    1418 Maple Avenue: three basement rooms, six photos, three voice notes, a

@@ -53,7 +53,8 @@ interface SampleRoom {
     heightIn: number;
     moisturePct: number;
   };
-  photos: { uri: string; caption: string }[];
+  /** A null caption is left for the demo to fill in on the Label screen. */
+  photos: { uri: string; title: string; caption: string | null }[];
   voice: string;
   /**
    * Whether to leave demo-AI suggestions waiting on this room. Only one room
@@ -84,9 +85,21 @@ const ROOMS: readonly SampleRoom[] = [
       moisturePct: 38,
     },
     photos: [
-      { uri: SAMPLE_PHOTOS.familyWall, caption: 'Tide line on the north wall, about 14" up' },
-      { uri: SAMPLE_PHOTOS.familyCarpet, caption: 'Carpet and pad saturated wall to wall' },
-      { uri: SAMPLE_PHOTOS.familyMeter, caption: 'Drywall reading 38% at 12" above the floor' },
+      {
+        uri: SAMPLE_PHOTOS.familyWall,
+        title: 'Family room - Water line',
+        caption: 'Water line visible on the north wall at approx. 14 in. above the floor.',
+      },
+      {
+        uri: SAMPLE_PHOTOS.familyCarpet,
+        title: 'Family room - Carpet & pad',
+        caption: 'Carpet and pad saturated wall to wall. Carpet pulled back at the corner.',
+      },
+      {
+        uri: SAMPLE_PHOTOS.familyMeter,
+        title: 'Family room - Moisture reading',
+        caption: null,
+      },
     ],
     voice:
       'Family room. Water came in from the laundry side. Carpet and pad are soaked wall to wall, ' +
@@ -114,7 +127,13 @@ const ROOMS: readonly SampleRoom[] = [
       heightIn: 8,
       moisturePct: 24,
     },
-    photos: [{ uri: SAMPLE_PHOTOS.bedroomWall, caption: 'Closet wall, wicking to about 8"' }],
+    photos: [
+      {
+        uri: SAMPLE_PHOTOS.bedroomWall,
+        title: 'Bedroom - Drywall',
+        caption: 'Closet wall wicking up the drywall to approx. 8 in.',
+      },
+    ],
     voice:
       'Bedroom. Carpet is wet along the closet side, maybe two thirds of the room. Drywall wicking ' +
       'about eight inches. Closet has bifold doors, those look fine.',
@@ -137,7 +156,11 @@ const ROOMS: readonly SampleRoom[] = [
       moisturePct: 41,
     },
     photos: [
-      { uri: SAMPLE_PHOTOS.laundrySource, caption: 'Source: failed washer supply line, shut off' },
+      {
+        uri: SAMPLE_PHOTOS.laundrySource,
+        title: 'Laundry - Source of loss',
+        caption: 'Source of loss. Failed washer supply line, water shut off at the valve.',
+      },
     ],
     voice:
       'Laundry is the source. Washer supply line let go, it is shut off now. Vinyl plank is ' +
@@ -274,6 +297,7 @@ export async function createSampleJob(
           takenAt,
           gpsLat: 39.9981,
           gpsLng: -83.0152,
+          title: photo.title,
           caption: photo.caption,
         },
         takenAt,

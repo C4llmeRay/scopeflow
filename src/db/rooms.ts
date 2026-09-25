@@ -121,8 +121,15 @@ export async function saveRoom(
         sort_order: input.sortOrder ?? 0,
         notes: input.notes ?? null,
       },
-      // The column is a JSON string; the server column is jsonb.
-      payloadOverrides: { offsets },
+      // The column is a JSON string; the server column is jsonb. A dimension of
+      // zero means "not measured" — a room that is only a name — and goes to
+      // the server as NULL, which its positive-size checks allow.
+      payloadOverrides: {
+        offsets,
+        ...(input.lengthIn > 0 ? {} : { length_in: null }),
+        ...(input.widthIn > 0 ? {} : { width_in: null }),
+        ...(input.heightIn > 0 ? {} : { height_in: null }),
+      },
     },
     now,
   );
@@ -130,6 +137,27 @@ export async function saveRoom(
   const room = await getRoom(db, input.id);
   if (!room) throw new Error(`room ${input.id} vanished immediately after being saved`);
   return room;
+}
+
+/** True once the room has real dimensions, rather than only a name. */
+export const isMeasured = (room: Pick<RoomRecord, 'lengthIn' | 'widthIn' | 'heightIn'>): boolean =>
+  room.lengthIn > 0 && room.widthIn > 0 && room.heightIn > 0;
+
+/**
+ * A room that is only a name — what a contractor taps while photographing. It
+ * can be measured later; until then the dimensions are zero here and NULL on
+ * the server.
+ */
+export async function addNamedRoom(
+  db: LocalDatabase,
+  input: { id: string; companyId: string; jobId: string; name: string; sortOrder?: number },
+  now: number = Date.now(),
+): Promise<RoomRecord> {
+  return saveRoom(
+    db,
+    { ...input, name: input.name.trim(), lengthIn: 0, widthIn: 0, heightIn: 0 },
+    now,
+  );
 }
 
 export async function listRooms(db: LocalDatabase, jobId: string): Promise<RoomRecord[]> {

@@ -212,6 +212,51 @@ export async function saveJob(
   return job;
 }
 
+/** The fields a contractor types about a job, as opposed to its status or rates. */
+export interface JobDetails {
+  propertyAddress1: string | null;
+  propertyCity: string | null;
+  propertyState: string | null;
+  propertyPostal: string | null;
+  claimNo: string | null;
+  carrier: string | null;
+  homeownerName: string | null;
+  homeownerPhone: string | null;
+  dateOfLoss: string | null;
+}
+
+const blankToNull = (value: string | null): string | null => value?.trim() || null;
+
+/**
+ * Edits only those fields. saveJob writes every column, so using it here would
+ * quietly reset a job's status and rates to their defaults.
+ */
+export async function updateJobDetails(
+  db: LocalDatabase,
+  id: string,
+  details: JobDetails,
+  now: number = Date.now(),
+): Promise<JobRecord | null> {
+  await patchRecord(
+    db,
+    'jobs',
+    id,
+    {
+      property_address1: blankToNull(details.propertyAddress1),
+      property_city: blankToNull(details.propertyCity),
+      property_state: blankToNull(details.propertyState),
+      property_postal: blankToNull(details.propertyPostal),
+      claim_no: blankToNull(details.claimNo),
+      carrier: blankToNull(details.carrier),
+      homeowner_name: blankToNull(details.homeownerName),
+      homeowner_phone: blankToNull(details.homeownerPhone),
+      date_of_loss: blankToNull(details.dateOfLoss),
+    },
+    now,
+  );
+  return getJob(db, id);
+}
+
 export async function listJobs(db: LocalDatabase, companyId: string): Promise<JobRecord[]> {
   const rows = await db.adapter.all<JobRow>(
     `select * from jobs

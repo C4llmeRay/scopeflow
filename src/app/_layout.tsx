@@ -90,7 +90,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
         <Stack.Screen name="index" options={{ title: 'Jobs' }} />
-        <Stack.Screen name="job/[id]" options={{ title: 'Inspection' }} />
+        <Stack.Screen name="job/[id]" options={{ title: 'Job' }} />
         <Stack.Screen
           name="job/[id]/room-wizard"
           options={{ title: 'Room', presentation: 'modal' }}
@@ -102,6 +102,11 @@ export default function RootLayout() {
         <Stack.Screen name="job/[id]/notes" options={{ title: 'Voice notes' }} />
         <Stack.Screen name="job/[id]/sort" options={{ title: 'Sort photos' }} />
         <Stack.Screen name="job/[id]/photos" options={{ title: 'Photos' }} />
+        <Stack.Screen name="job/[id]/label" options={{ title: 'Label photos' }} />
+        <Stack.Screen name="job/[id]/rooms" options={{ title: 'Rooms', presentation: 'modal' }} />
+        <Stack.Screen name="job/[id]/details" options={{ title: 'Job details', presentation: 'modal' }} />
+        <Stack.Screen name="job/[id]/export" options={{ title: 'Export for Xactimate' }} />
+        <Stack.Screen name="export" options={{ title: 'Export for Xactimate' }} />
         <Stack.Screen name="job/[id]/estimate" options={{ title: 'Estimate' }} />
         <Stack.Screen name="job/[id]/send" options={{ title: 'Send' }} />
         <Stack.Screen name="prices" options={{ title: 'Price list' }} />

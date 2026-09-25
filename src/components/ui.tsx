@@ -31,6 +31,7 @@ export function TypeText({
   role = 'body',
   tone = 'text',
   style,
+  numberOfLines,
   children,
 }: {
   role?: TypeRole;
@@ -39,10 +40,16 @@ export function TypeText({
     'text' | 'textMuted' | 'textFaint' | 'accent' | 'danger' | 'success' | 'warn' | 'hivis'
   >;
   style?: StyleProp<TextStyle>;
+  /** Truncates with an ellipsis rather than wrapping. */
+  numberOfLines?: number;
   children: ReactNode;
 }) {
   const c = useTheme();
-  return <Text style={[type[role] as TextStyle, { color: c[tone] }, style]}>{children}</Text>;
+  return (
+    <Text numberOfLines={numberOfLines} style={[type[role] as TextStyle, { color: c[tone] }, style]}>
+      {children}
+    </Text>
+  );
 }
 
 export function Label({ children }: { children: ReactNode }) {
@@ -318,6 +325,60 @@ export function InlineField({
   );
 }
 
+/**
+ * A labelled text field at full width — a photo's name, a job's address. The
+ * multiline form grows to fit a dictated description.
+ */
+export function TextField({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  hint,
+  multiline,
+  autoCapitalize = 'sentences',
+  keyboardType = 'default',
+  testID,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (next: string) => void;
+  placeholder?: string;
+  hint?: string;
+  multiline?: boolean;
+  autoCapitalize?: 'none' | 'sentences' | 'words';
+  keyboardType?: 'default' | 'email-address' | 'phone-pad';
+  testID?: string;
+}) {
+  const c = useTheme();
+  return (
+    <View style={styles.textField}>
+      <Label>{label}</Label>
+      <TextInput
+        testID={testID}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={c.textFaint}
+        multiline={multiline}
+        textAlignVertical={multiline ? 'top' : 'center'}
+        autoCapitalize={autoCapitalize}
+        keyboardType={keyboardType}
+        style={[
+          type.body as TextStyle,
+          multiline ? styles.notes : styles.textInput,
+          { backgroundColor: c.surfaceAlt, borderColor: c.border, color: c.text },
+        ]}
+      />
+      {hint ? (
+        <TypeText role="caption" tone="textFaint">
+          {hint}
+        </TypeText>
+      ) : null}
+    </View>
+  );
+}
+
 export function NotesField({
   value,
   onChangeText,
@@ -488,6 +549,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     paddingHorizontal: space.md,
     textAlign: 'right',
+  },
+  textField: { gap: space.xs },
+  textInput: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    paddingHorizontal: space.md,
   },
   notes: {
     minHeight: 88,

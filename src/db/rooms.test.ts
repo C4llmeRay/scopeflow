@@ -14,7 +14,15 @@ import { SyncEngine } from '../sync/engine';
 import { SqliteOutboxStore } from '../sync/sqlite-store';
 import { UPLOAD_QUEUE_TABLE } from '../sync/uploads';
 import type { OutboxEntry, PushResult, SyncTransport } from '../sync/types';
-import { getRoom, listRooms, restoreRoom, saveRoom, softDeleteRoom } from './rooms';
+import {
+  addNamedRoom,
+  getRoom,
+  isMeasured,
+  listRooms,
+  restoreRoom,
+  saveRoom,
+  softDeleteRoom,
+} from './rooms';
 import { APP_SCHEMA } from './schema';
 import type { RunResult, SqlParam, SqliteAdapter } from './sqlite-adapter';
 import type { LocalDatabase } from './types';
@@ -274,5 +282,26 @@ describe('the airplane mode scenario', () => {
     expect(await listRooms(second, 'job-1')).toHaveLength(1);
     expect(await second.outbox.counts()).toEqual({ pending: 1, failed: 0 });
     expect((await second.outbox.nextDue(2_000))?.payload.name).toBe('Master Bedroom');
+  });
+});
+
+describe('a room that is only a name', () => {
+  it('is stored unmeasured, and reaches the server with no dimensions', async () => {
+    const db = await makeDb();
+    const room = await addNamedRoom(
+      db,
+      { id: 'room-9', companyId: 'co-1', jobId: 'job-1', name: '  Kitchen ' },
+      1_000,
+    );
+
+    expect(room.name).toBe('Kitchen');
+    expect(isMeasured(room)).toBe(false);
+    const [entry] = (await db.outbox.all()).filter((e) => e.entityId === 'room-9');
+    expect(entry.payload).toMatchObject({ length_in: null, width_in: null, height_in: null });
+  });
+
+  it('counts as measured once it has all three dimensions', async () => {
+    const db = await makeDb();
+    expect(isMeasured(await saveRoom(db, bedroom, 1_000))).toBe(true);
   });
 });

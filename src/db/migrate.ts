@@ -41,6 +41,13 @@ export const COLUMN_ADDITIONS: readonly ColumnAddition[] = [
     column: 'cancel_at_period_end',
     definition: 'integer not null default 0',
   },
+  // The Xactimate photo workflow: each photo's name. Its description is the
+  // existing caption column.
+  {
+    table: 'photos',
+    column: 'title',
+    definition: 'text',
+  },
 ];
 
 async function columnsOf(adapter: SqliteAdapter, table: string): Promise<Set<string>> {

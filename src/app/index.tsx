@@ -9,7 +9,7 @@
 
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button, Card, Screen, SyncChip, TypeText } from '@/components/ui';
 import { openLocalDatabase } from '@/db/client';
@@ -28,7 +28,8 @@ import { createSampleJob } from '@/features/demo/sample-job';
 import { currentCompanyId, ensureCompany } from '@/features/jobs/useCompany';
 import { isProfileComplete } from '@/features/settings/company-form';
 import { useSync } from '@/hooks/use-sync';
-import { showDemoTools } from '@/lib/demo-mode';
+import { estimatingEnabled, showDemoTools } from '@/lib/demo-mode';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { newId } from '@/lib/id';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -66,7 +67,8 @@ export default function JobListScreen() {
     const db = await openLocalDatabase();
     const id = newId();
     await saveJob(db, { id, companyId: currentCompanyId(), peril: 'water' });
-    router.push(`/job/${id}`);
+    // The address first, so the job never sits in the list as "Untitled".
+    router.push(`/job/${id}/details?new=1`);
   }, []);
 
   const [loadingSample, setLoadingSample] = useState(false);
@@ -97,22 +99,44 @@ export default function JobListScreen() {
       footer={
         <>
           <Button label="New job" onPress={() => void startJob()} />
-          <View style={styles.footerRow}>
-            <View style={styles.footerItem}>
-              <Button
-                label="Price list"
-                variant="secondary"
-                onPress={() => router.push('/prices')}
-              />
+          {estimatingEnabled() ? (
+            <View style={styles.footerRow}>
+              <View style={styles.footerItem}>
+                <Button
+                  label="Price list"
+                  variant="secondary"
+                  onPress={() => router.push('/prices')}
+                />
+              </View>
+              <View style={styles.footerItem}>
+                <Button
+                  label="Settings"
+                  variant="secondary"
+                  onPress={() => router.push('/settings')}
+                />
+              </View>
             </View>
-            <View style={styles.footerItem}>
-              <Button
-                label="Settings"
-                variant="secondary"
-                onPress={() => router.push('/settings')}
-              />
+          ) : (
+            <View style={styles.footerRow}>
+              {/* At the desk, the jobs are on the phones: export reads the cloud. */}
+              {Platform.OS === 'web' && isSupabaseConfigured() ? (
+                <View style={styles.footerItem}>
+                  <Button
+                    label="Export for Xactimate"
+                    variant="secondary"
+                    onPress={() => router.push('/export')}
+                  />
+                </View>
+              ) : null}
+              <View style={styles.footerItem}>
+                <Button
+                  label="Settings"
+                  variant="secondary"
+                  onPress={() => router.push('/settings')}
+                />
+              </View>
             </View>
-          </View>
+          )}
         </>
       }
     >
@@ -124,7 +148,7 @@ export default function JobListScreen() {
         online={sync.online}
       />
 
-      {!isProfileComplete(company) ? (
+      {estimatingEnabled() && !isProfileComplete(company) ? (
         <Card>
           <TypeText role="heading">Finish your business details</TypeText>
           <TypeText role="body" tone="textMuted">

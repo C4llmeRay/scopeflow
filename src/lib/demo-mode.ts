@@ -5,6 +5,10 @@
  *                                     demo with no backend and claude with one.
  *   EXPO_PUBLIC_DEMO_TOOLS=1          Keeps "Load a sample job" once a backend
  *                                     is configured. Always on without one.
+ *   EXPO_PUBLIC_ESTIMATING=1          Shows the estimating features — measured
+ *                                     rooms, damage sheet, pricing, estimates.
+ *                                     Off by default: the product is photos
+ *                                     for Xactimate, which does the estimate.
  *   EXPO_PUBLIC_EMAIL_CODES=1         Offers "email me a code" on the sign-in
  *                                     screen. Off by default: it needs working
  *                                     email (custom SMTP on a free project).
@@ -31,4 +35,9 @@ export function showDemoTools(): boolean {
 /** True when sign-in may offer an emailed code as well as a password. */
 export function emailCodesEnabled(): boolean {
   return process.env.EXPO_PUBLIC_EMAIL_CODES === '1';
+}
+
+/** True when the estimating half of the app is shown. See the header. */
+export function estimatingEnabled(): boolean {
+  return process.env.EXPO_PUBLIC_ESTIMATING === '1';
 }

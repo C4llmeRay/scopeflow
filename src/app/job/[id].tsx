@@ -30,7 +30,9 @@ import { listOpenings, toCoreOpenings } from '@/db/openings';
 import { listPhotos, type PhotoRecord } from '@/db/photos';
 import { listRooms, type RoomRecord } from '@/db/rooms';
 import { usePhotoUri } from '@/features/photos/source';
+import { PhotoJobScreen } from '@/features/jobs/PhotoJobScreen';
 import { formatFeetInches } from '@/features/rooms/dimension';
+import { estimatingEnabled } from '@/lib/demo-mode';
 import { useSync } from '@/hooks/use-sync';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
@@ -46,7 +48,7 @@ interface RoomView {
 /** How many thumbnails a room card shows before "+N". */
 const STRIP = 4;
 
-export default function JobDetailScreen() {
+function EstimatingJobScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [job, setJob] = useState<JobRecord | null>(null);
   const [views, setViews] = useState<RoomView[]>([]);
@@ -296,6 +298,14 @@ export default function JobDetailScreen() {
       ) : null}
     </Screen>
   );
+}
+
+/**
+ * Photos for Xactimate by default; the measuring and estimating screen when
+ * EXPO_PUBLIC_ESTIMATING=1. Decided once per build, so hook order never changes.
+ */
+export default function JobScreen() {
+  return estimatingEnabled() ? <EstimatingJobScreen /> : <PhotoJobScreen />;
 }
 
 function StripThumb({ photo }: { photo: PhotoRecord }) {

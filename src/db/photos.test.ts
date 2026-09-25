@@ -24,6 +24,7 @@ import {
   assignPhotoToRoom,
   capturePhoto,
   getPhoto,
+  labelPhoto,
   listPhotos,
   markVariantUploaded,
   pendingUploadCount,
@@ -318,5 +319,41 @@ describe('the upload queue', () => {
     await capturePhoto(db, shot('p1', { localThumbUri: null }), clock);
     const queued = await db.uploads.all();
     expect(queued.map((e) => e.payload.variant)).toEqual(['original']);
+  });
+});
+
+describe('labelling for Xactimate', () => {
+  it('keeps the name the camera gave a photo', async () => {
+    const db = await makeDb();
+    await capturePhoto(db, shot('p1', { title: 'Master Bedroom - Water line' }), 1_000);
+    expect((await getPhoto(db, 'p1'))?.title).toBe('Master Bedroom - Water line');
+  });
+
+  it('writes room, name and description as one patch for the server', async () => {
+    const db = await makeDb();
+    await capturePhoto(db, shot('p1'), 1_000);
+    const [row] = await db.outbox.all();
+    await db.outbox.markSynced(row.seq, row.revision, 1_000);
+
+    await labelPhoto(
+      db,
+      'p1',
+      { roomId: null, title: 'Front of risk', caption: 'Front elevation.' },
+      2_000,
+    );
+
+    expect(await getPhoto(db, 'p1')).toMatchObject({
+      roomId: null,
+      title: 'Front of risk',
+      caption: 'Front elevation.',
+    });
+    const pending = (await db.outbox.all()).filter((e) => e.state === 'pending');
+    expect(pending).toHaveLength(1);
+    expect(pending[0].op).toBe('patch');
+    expect(pending[0].payload).toMatchObject({
+      room_id: null,
+      title: 'Front of risk',
+      caption: 'Front elevation.',
+    });
   });
 });

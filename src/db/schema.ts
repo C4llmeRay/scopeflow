@@ -129,6 +129,9 @@ create table if not exists photos (
   taken_at        integer,
   gps_lat         real,
   gps_lng         real,
+  -- The photo's name in Xactimate, e.g. "Kitchen - Water line".
+  title           text,
+  -- Its description in Xactimate.
   caption         text,
   ai_labels       text not null default '{}',
   -- State of the compressed derivative, which is what the UI shows.

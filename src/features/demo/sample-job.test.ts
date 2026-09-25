@@ -82,6 +82,9 @@ describe('the sample job', () => {
     const photos = await listPhotos(db, jobId);
     expect(photos.filter((p) => p.roomId === null)).toHaveLength(1);
     expect(photos.every((p) => p.localUri?.startsWith('data:image/jpeg'))).toBe(true);
+    // Named like a real set, with two left for the Label screen to show off.
+    expect(photos.filter((p) => p.title).map((p) => p.title)).toContain('Laundry - Source of loss');
+    expect(photos.filter((p) => !(p.title && p.caption))).toHaveLength(2);
 
     const notes = await listVoiceNotes(db, jobId);
     expect(notes).toHaveLength(3);

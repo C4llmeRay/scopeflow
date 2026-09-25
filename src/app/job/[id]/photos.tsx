@@ -10,20 +10,17 @@
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Button, Card, Chip, Label, Screen, TypeText } from '@/components/ui';
+import { Button, Card, Chip, Label, Screen, TextField, TypeText } from '@/components/ui';
 import { openLocalDatabase } from '@/db/client';
-import {
-  assignPhotoToRoom,
-  listPhotos,
-  setPhotoCaption,
-  type PhotoRecord,
-} from '@/db/photos';
+import { labelPhoto, listPhotos, type PhotoRecord } from '@/db/photos';
 import { listRooms, type RoomRecord } from '@/db/rooms';
+import { isLabelled } from '@/features/photos/labels';
+import { DescriptionField } from '@/features/dictation/DescriptionField';
 import { usePhotoUri } from '@/features/photos/source';
 import { goBack } from '@/lib/navigation';
-import { radius, space, type } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/use-theme';
 
 export default function JobPhotosScreen() {
@@ -32,8 +29,9 @@ export default function JobPhotosScreen() {
   const [rooms, setRooms] = useState<RoomRecord[]>([]);
   const [filter, setFilter] = useState<string | null>(roomId ?? null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [title, setTitle] = useState('');
   const [caption, setCaption] = useState('');
-  const c = useTheme();
+  const [roomDraft, setRoomDraft] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const db = await openLocalDatabase();
@@ -56,79 +54,67 @@ export default function JobPhotosScreen() {
     [filter, photos],
   );
   const open = photos.find((p) => p.id === openId) ?? null;
-  const roomName = (id: string | null) =>
-    rooms.find((r) => r.id === id)?.name ?? 'Not filed under a room';
 
   const openPhoto = (photo: PhotoRecord) => {
     setOpenId(photo.id);
+    setTitle(photo.title ?? '');
     setCaption(photo.caption ?? '');
+    setRoomDraft(photo.roomId);
   };
 
-  const saveCaption = useCallback(async () => {
+  const save = useCallback(async () => {
     if (!open) return;
     const db = await openLocalDatabase();
-    await setPhotoCaption(db, open.id, caption.trim() || null);
+    await labelPhoto(db, open.id, {
+      roomId: roomDraft,
+      title: title.trim() || null,
+      caption: caption.trim() || null,
+    });
     await load();
-  }, [caption, load, open]);
-
-  const move = useCallback(
-    async (targetRoomId: string) => {
-      if (!open) return;
-      const db = await openLocalDatabase();
-      await assignPhotoToRoom(db, open.id, targetRoomId);
-      await load();
-    },
-    [load, open],
-  );
+  }, [caption, load, open, roomDraft, title]);
 
   // ---- One photo ------------------------------------------------------------
 
   if (open) {
-    const changed = caption.trim() !== (open.caption ?? '');
+    const changed =
+      title.trim() !== (open.title ?? '') ||
+      caption.trim() !== (open.caption ?? '') ||
+      roomDraft !== open.roomId;
     return (
       <Screen
         footer={
           <>
-            {changed ? <Button label="Save caption" onPress={() => void saveCaption()} /> : null}
+            {changed ? <Button label="Save" onPress={() => void save()} /> : null}
             <Button label="Back to photos" variant="ghost" onPress={() => setOpenId(null)} />
           </>
         }
       >
         <FullPhoto photo={open} />
         <TypeText role="caption" tone="textFaint">
-          {roomName(open.roomId)}
-          {open.takenAt ? ` · ${new Date(open.takenAt).toLocaleString()}` : ''}
+          {open.takenAt ? new Date(open.takenAt).toLocaleString() : ''}
           {open.gpsLat !== null && open.gpsLng !== null
             ? ` · ${open.gpsLat.toFixed(4)}, ${open.gpsLng.toFixed(4)}`
             : ''}
         </TypeText>
 
-        <View style={styles.section}>
-          <Label>Caption</Label>
-          <TextInput
-            value={caption}
-            onChangeText={setCaption}
-            placeholder="What this shows — it goes on the photo report"
-            placeholderTextColor={c.textFaint}
-            multiline
-            style={[
-              type.body as never,
-              styles.caption,
-              { backgroundColor: c.surfaceAlt, borderColor: c.border, color: c.text },
-            ]}
-          />
-        </View>
+        <TextField label="Name" value={title} onChangeText={setTitle} placeholder="Kitchen - Water line" />
+        <DescriptionField
+          value={caption}
+          onChangeText={setCaption}
+          placeholder="What an adjuster should see in this photo"
+        />
 
         {rooms.length > 0 ? (
           <View style={styles.section}>
             <Label>Room</Label>
             <View style={styles.chipRow}>
+              <Chip label="No room" selected={roomDraft === null} onPress={() => setRoomDraft(null)} />
               {rooms.map((room) => (
                 <Chip
                   key={room.id}
                   label={room.name}
-                  selected={room.id === open.roomId}
-                  onPress={() => void move(room.id)}
+                  selected={room.id === roomDraft}
+                  onPress={() => setRoomDraft(room.id)}
                 />
               ))}
             </View>
@@ -179,6 +165,9 @@ export default function JobPhotosScreen() {
               style={({ pressed }) => [styles.cell, { opacity: pressed ? 0.8 : 1 }]}
             >
               <Thumb photo={photo} />
+              <TypeText role="caption" tone={isLabelled(photo) ? 'textMuted' : 'warn'} numberOfLines={1}>
+                {photo.title ?? 'No name'}
+              </TypeText>
             </Pressable>
           ))}
         </View>
@@ -218,8 +207,7 @@ const styles = StyleSheet.create({
   section: { gap: space.sm },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  cell: { width: '31.5%', aspectRatio: 1 },
-  thumb: { width: '100%', height: '100%', borderRadius: radius.sm, borderWidth: 1 },
+  cell: { width: '31.5%', gap: 2 },
+  thumb: { width: '100%', aspectRatio: 1, borderRadius: radius.sm, borderWidth: 1 },
   full: { width: '100%', aspectRatio: 3 / 4, maxHeight: 460, borderRadius: radius.md, borderWidth: 1 },
-  caption: { minHeight: 72, borderWidth: 1, borderRadius: radius.sm, padding: space.md },
 });
